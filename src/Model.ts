@@ -1,115 +1,22 @@
-# kysely-orm
-TypeSafe ORM for kysely library
+import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError } from 'kysely';
+import type Database from './Database';
 
-# Define Database connection
+export type ModelType<Table> = Selectable<Table>;
+export type StaticThis<T> = { new (): T }; 
 
-```ts: ./config/db.ts
-import { Database } from 'kysely-orm';
+export { NoResultError };
 
-export default new Database({
-  connectionString: '...',
-});
-```
+export class ModelBase<DB> {
+  readonly db: Database<DB>;
 
-# Define Model
-
-```ts ./models/User.ts
-import { Model } from 'kysely-orm';
-
-export default class User<DB, TableName, IdColumnName> extends Model<DB, TableName, IdColumnName> {
-  findByEmail(email: string) {
-    return this.findOne('email', email);
-  }
-}
-```
-
-# Connect Models to specific database
-
-```ts ./models/index.ts
-import db from '../config/db';
-import User from './User';
-import Post from './Post';
-
-export const User = new User(db, 'users', 'id');
-export const Post = new Post(db, 'posts', 'uuid');
-```
-
-# Define service
-
-```ts ./services/user.ts
-import { User } from '../models';
-
-async function createUser(data) {
-  const { email } = data;
-  const user = await User.findByEmail(email);
-  if (user) {
-    throw new Error('User already exists');
+  constructor(db: Database<DB>) {
+    this.db = db;
   }
 
-  ...
-}
-```
-
-# Transactions
-
-```ts 
-import { transaction } from 'kysely-orm';
-import { User, Post } from '../models';
-
-async function createUser(data) {
-  const newUser = async transaction(User, Post, async (UserTrx, PostTrx) => {
-    // UserTrx is new model binded to transaction
-    const user = await UserTrx.findByEmail(email);
-    if (user) {
-      throw new Error('User already exists');
-    }
-
-    return UserTrx.insert(data);
-  });
-
-  ...
-}
-```
-
-# Requests and models/transactions isolation
-
-For each http request, you should create a new isolated model instance (best security practice). Here is an example of how to do that.
-
-```ts
-import { User } from '../models';
-
-const IsolatedUserModel = User.bind();
-```
-
-
-# Plugins
-
-Sometimes you want to use same logic across your models. For example automatically set upadatedAt when you update row data.
-Here is example how to define model which has support for plugins.
-
-```ts 
-import { applyPlugins, updatedAt, slug } from 'kysely-orm';
-import type DB from './@types/DB';
-
-export default class User extends applyPlugins<DB, 'users', 'id'>(Model, 'users', 'id', [
-  updatedAt,
-  slug({
-    field: 'username',
-    sources: ['name', 'firstName', 'lastName'],
-    slugOptions: {
-      truncate: 15,
-    },
-  }),
-]) {
-  findByEmail(email: string) {
-    return this.findOne('email', email);
+  bind(db: Database<DB>): ModelBase<DB> {
+    return new (this.constructor as typeof ModelBase)(db);
   }
 }
-```
-
-# Standard Model functions
-
-```ts
 
 export default class Model<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string> extends ModelBase<DB> {
   readonly table: TableName;
@@ -168,7 +75,6 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
       .executeTakeFirst();
   }
 
-  /* Finds a single row by its id column. Returns undefined if row does not exists. */
   findById(id: SelectType<DB[TableName][IdColumnName]>) {
     return this.findOne(this.id, id);
   }
@@ -190,7 +96,6 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
       .executeTakeFirstOrThrow(error);
   }
 
-  /* Finds a single row by its id column. Throw error if row does not exists. */
   getById(id: SelectType<DB[TableName][IdColumnName]>) {
     return this.getOne(this.id, id);
   }
@@ -293,4 +198,3 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     return this.deleteOne(this.id, id);
   }
 }
-```
