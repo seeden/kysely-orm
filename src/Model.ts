@@ -1,5 +1,6 @@
 import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError } from 'kysely';
 import type Database from './Database';
+import { type TransactionCallback } from './Database';
 
 export type ModelType<Table> = Selectable<Table>;
 export type StaticThis<T> = { new (): T }; 
@@ -37,18 +38,12 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     return data;
   }
 
-  bind(db: Database<DB>) {
-    return new (this.constructor as typeof Model)(db, this.table, this.id);
+  isolate() {
+    return new (this.constructor as typeof Model)(this.db, this.table, this.id);
   }
 
-  transaction<Type>(callback: (model: Model<DB, TableName, IdColumnName>) => Promise<Type>) {
-    if (this.db.isTransaction) {
-      return callback(this);
-    }
-
-    return this.db.transaction<Type>((trx) => {
-      return callback(this.bind(trx));
-    });
+  transaction<Type>(callback: TransactionCallback<DB, Type>) {
+    return this.db.transaction(callback);
   }
 
   find<ColumnName extends keyof DB[TableName] & string>(

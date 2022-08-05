@@ -1,6 +1,6 @@
 {
   "name": "kysely-orm",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Type safe ORM for kysely",
   "repository": {
     "type": "git",
@@ -23,21 +23,25 @@
     "build": "npm run clean && npm run build:esm && npm run build:cjs",
     "build:esm": "tsc -p tsconfig.json",
     "build:cjs": "tsc -p tsconfig-cjs.json",
+    "test": "jest",
     "prepublishOnly": "npm run build"
   },
   "author": "Zlatko Fedor <kysely-orm@zlatkofedor.com>",
   "license": "MIT",
   "dependencies": {
-    "speakingurl": "^14.0.1",
-    "puid": "^1.0.7"
+    "puid": "^1.0.7",
+    "speakingurl": "^14.0.1"
   },
   "devDependencies": {
+    "@types/jest": "^28.1.6",
     "@types/pg": "^8.6.5",
-    "esbuild": "^0.14.47",
+    "dotenv": "^16.0.1",
+    "jest": "^28.1.3",
     "kysely": "^0.20.0",
     "pg": "^8.7.3",
     "prettier": "^2.7.1",
-    "tsd": "^0.21.0",
+    "ts-jest": "^28.0.7",
+    "tsd": "^0.22.0",
     "typescript": "4.7.4"
   },
   "peerDependencies": {

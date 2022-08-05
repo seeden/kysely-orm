@@ -16,7 +16,7 @@ export default new Database({
 ```ts ./models/User.ts
 import { Model } from 'kysely-orm';
 
-export default class User<DB, TableName, IdColumnName> extends Model<DB, TableName, IdColumnName> {
+export default class User extends Model<DB, 'users', 'id'> {
   findByEmail(email: string) {
     return this.findOne('email', email);
   }
@@ -53,23 +53,101 @@ async function createUser(data) {
 # Transactions
 
 ```ts 
-import { transaction } from 'kysely-orm';
 import { User, Post } from '../models';
 
 async function createUser(data) {
-  const newUser = async transaction(User, Post, async (UserTrx, PostTrx) => {
-    // UserTrx is new model binded to transaction
-    const user = await UserTrx.findByEmail(email);
+  const newUser = User.transaction(async () => {
+    const user = await User.findByEmail(email);
     if (user) {
       throw new Error('User already exists');
     }
 
-    return UserTrx.insert(data);
+    return User.insert(data);
   });
 
   ...
 }
 ```
+
+How is it working?
+Transactions are using node AsyncLocalStorage whitch is stable node feature.
+Therefore you do not need to pass any transaction object to your current models.
+Everything working out of the box.
+
+### Use transaction instead of Model.transaction
+Model.transaction is alias for db.transaction
+
+```ts
+import { transaction } from 'kysely-orm';
+import db from '../config/db';
+import { User, Post } from '../models';
+
+async function createUser(data) {
+  const newUser = db.transaction(async () => {
+    const user = await User.findByEmail(email);
+    if (user) {
+      throw new Error('User already exists');
+    }
+
+    return User.insert(data);
+  });
+
+  ...
+}
+```
+
+### How to use multiple transactions
+
+Working with multiple models and different transactions is not an easy task. For this purpose you can use
+
+```ts
+import { transaction } from 'kysely-orm';
+import { User, Post } from '../models';
+
+async function createUsers(userData1, userData2) {
+  const [user1, user2] = await Promise.all([
+    User.transaction(() => User.insert(userData1)),
+    User.transaction(() => User.insert(userData2)),
+  ]);
+  ...
+}
+```
+
+### The afterCommit hook
+
+A transaction object allows tracking if and when it is committed.
+
+An afterCommit hook can be added to both managed and unmanaged transaction objects:
+
+```ts 
+import { User, Post } from '../models';
+
+async function createUser(data) {
+  const newUser = User.transaction(async ({ afterCommit }) => {
+    const user = await User.findByEmail(email);
+    if (user) {
+      throw new Error('User already exists');
+    }
+
+    const user = await User.insert(data);
+
+    afterCommit(async () => {
+      await notifyUser(user);
+    });
+
+    ...
+
+    return user;
+  });
+
+  ...
+}
+```
+
+The callback passed to afterCommit can be async. In this case transaction call will wait for it before settling.
+
+The afterCommit hook is not raised if the transaction is rolled back.
+The afterCommit hook does not modify the return value of the transaction.
 
 # Requests and models/transactions isolation
 
@@ -78,7 +156,7 @@ For each http request, you should create a new isolated model instance (best sec
 ```ts
 import { User } from '../models';
 
-const IsolatedUserModel = User.bind();
+const IsolatedUserModel = User.isolate();
 ```
 
 

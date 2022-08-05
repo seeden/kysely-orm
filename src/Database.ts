@@ -1,22 +1,41 @@
 import { Kysely, PostgresDialect, CamelCasePlugin } from 'kysely';
 import { Pool } from 'pg';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type Model from './Model';
 
 export type DatabaseConfig<DB> = {
   connectionString: string;
 } | {
-  db: Kysely<DB>;
+  kysely: Kysely<DB>;
+  asyncLocalDb: AsyncLocalStorage<Kysely<DB>>;
 };
 
+type AfterCommitCallback = () => Promise<any>;
+
+type TransactionState<DB> = {
+  transaction: Kysely<DB>;
+  committed: boolean;
+  afterCommit: AfterCommitCallback[];
+};
+
+type TransactionResponse<DB> = { 
+  transaction: Kysely<DB>;
+  afterCommit: (callback: AfterCommitCallback) => void;
+};
+
+export type TransactionCallback<DB, Type> = (trx: TransactionResponse<DB>) => Promise<Type>;
+
 export default class Database<DB> {
-  readonly db: Kysely<DB>;
+  private kysely: Kysely<DB>;
+  private asyncLocalDb = new AsyncLocalStorage<TransactionState<DB>>();
 
   constructor(config: DatabaseConfig<DB>) {
-    if ('db' in config) {
-      this.db = config.db;
+    if ('kysely' in config) {
+      this.kysely = config.kysely;
+
     } else {
       const { connectionString } = config;
-
-      this.db = new Kysely<DB>({
+      this.kysely = new Kysely<DB>({
         dialect: new PostgresDialect({
           pool: new Pool({
             connectionString,
@@ -32,7 +51,7 @@ export default class Database<DB> {
           }
         },
       });
-    }
+    }    
   }
 
   get dynamic() {
@@ -45,6 +64,24 @@ export default class Database<DB> {
 
   get isTransaction() {
     return this.db.isTransaction;
+  }
+
+  get db() {
+    const transactionState = this.asyncLocalDb.getStore();
+    if (!transactionState) {
+      return this.kysely;
+    }
+
+    const { transaction, committed } = transactionState;
+    if (committed) {
+      throw new Error('Transaction is already committed');
+    }
+
+    return transaction;
+  }
+
+  model<T1 extends typeof Model<DB, TableName, IdColumnName>, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(model: T1, table: TableName, id: IdColumnName) {
+    return (new model(this, table, id)) as InstanceType<T1>;
   }
 
   selectFrom<TableName extends keyof DB & string>(table: TableName) {
@@ -63,67 +100,48 @@ export default class Database<DB> {
     return this.db.deleteFrom(table);
   }
 
-  transaction<Type>(callback: (db: TransactionDatabase<DB>) => Promise<Type>) {
-    return this.db.transaction().execute<Type>((trx) => {
-      const dbTrx = new TransactionDatabase<DB>({
-        db: trx,
+  transaction<Type>(callback: TransactionCallback<DB, Type>) {
+    const transactionState = this.asyncLocalDb.getStore();
+    if (transactionState && !transactionState.committed) {
+      console.log('you are already in transaction. using current transaction instance');
+      return callback({
+        transaction: transactionState.transaction,
+        afterCommit(callback: AfterCommitCallback) {
+          transactionState.afterCommit.push(callback);
+        },
+      });
+    }
+
+    return this.db.transaction().execute<Type>(async (transaction) => {
+      const transactionState: TransactionState<DB> = {
+        transaction,
+        committed: false,
+        afterCommit: [],
+      };
+
+      const response = await new Promise<Type>((resolve, reject) => {
+        this.asyncLocalDb.run(transactionState, async () => {
+          try {
+            const result = await callback({
+              transaction,
+              afterCommit(callback: AfterCommitCallback) {
+                transactionState.afterCommit.push(callback);
+              },
+            });
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          } finally {
+            transactionState.committed = true;
+          }
+        });
       });
 
+      for (const afterCommit of transactionState.afterCommit) {
+        await afterCommit();
+      }
 
-      return dbTrx.execute<Type>(callback);
+      return response;
     });
-  }
-}
-
-class TransactionDatabase<DB> extends Database<DB> {
-  private isTransacting: boolean = true;
-
-
-  async execute<Type>(callback: (db: TransactionDatabase<DB>) => Promise<Type>) {
-    if (!this.isTransacting) {
-      throw new Error('Cannot execute transaction outside of transaction');
-    }
-
-    try {
-      return await callback(this);
-    } finally {
-      this.isTransacting = false;
-    }
-  }
-
-  selectFrom<TableName extends keyof DB & string>(table: TableName) {
-    if (!this.isTransacting) {
-      throw new Error('Cannot start transaction outside of transaction');
-    }
-    return super.selectFrom(table);
-  }
-
-  insertInto<TableName extends keyof DB & string>(table: TableName) {
-    if (!this.isTransacting) {
-      throw new Error('Cannot start transaction outside of transaction');
-    }
-    return super.insertInto(table);
-  }
-
-  updateTable<TableName extends keyof DB & string>(table: TableName) {
-    if (!this.isTransacting) {
-      throw new Error('Cannot start transaction outside of transaction');
-    }
-    return super.updateTable(table);
-  }
-
-  deleteFrom<TableName extends keyof DB & string>(table: TableName) {
-    if (!this.isTransacting) {
-      throw new Error('Cannot start transaction outside of transaction');
-    }
-    return super.deleteFrom(table);
-  }
-
-  transaction<Type>(callback: (db: TransactionDatabase<DB>) => Promise<Type>): Promise<Type> {
-    if (!this.isTransacting) {
-      throw new Error('Cannot start transaction outside of transaction');
-    }
-
-    return callback(this);       
   }
 }

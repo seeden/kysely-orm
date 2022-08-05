@@ -8,3 +8,5 @@ package-lock.json
 tsconfig-base.json
 tsconfig-cjs.json
 tsconfig.json
+./src/test.ts
+.env
