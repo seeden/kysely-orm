@@ -74,11 +74,10 @@ Transactions are using node AsyncLocalStorage whitch is stable node feature.
 Therefore you do not need to pass any transaction object to your current models.
 Everything working out of the box.
 
-### Use transaction instead of Model.transaction
+### Use db.transaction instead of Model.transaction
 Model.transaction is alias for db.transaction
 
 ```ts
-import { transaction } from 'kysely-orm';
 import db from '../config/db';
 import { User, Post } from '../models';
 
@@ -101,7 +100,6 @@ async function createUser(data) {
 Working with multiple models and different transactions is not an easy task. For this purpose you can use
 
 ```ts
-import { transaction } from 'kysely-orm';
 import { User, Post } from '../models';
 
 async function createUsers(userData1, userData2) {
