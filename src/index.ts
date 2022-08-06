@@ -1,7 +1,7 @@
 import { NoResultError } from 'kysely';
 
 import Database from './Database';
-import Model from './Model';
+import Model, { type ModelType } from './Model';
 import applyPlugins from './plugins/applyPlugins';
 import bindable from './plugins/bindable';
 import updatedAt from './plugins/updatedAt';
@@ -20,3 +20,5 @@ export {
 
   NoResultError,
 };
+
+export type { ModelType };

@@ -16,6 +16,10 @@ interface DB {
 };
 
 class UserModel extends Model<DB, 'users', 'id'> {
+  static bind(db: Database<DB>) {
+    return super.bind(db, this, 'users', 'id')
+  }
+
   findByEmail(email: string) {
     return this.findOne('email', email);
   }
@@ -25,7 +29,7 @@ const db = new Database<DB>({
   connectionString: process.env.DATASABE_URL,
 });
 
-const User = new UserModel(db, 'users', 'id');
+const User = UserModel.bind(db);
 
 describe('transactions', () => {
   it('should execute transaction via db', async () => {

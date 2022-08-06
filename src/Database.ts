@@ -1,7 +1,6 @@
 import { Kysely, PostgresDialect, CamelCasePlugin } from 'kysely';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type Model from './Model';
 
 export type DatabaseConfig<DB> = {
   connectionString: string;
@@ -78,10 +77,6 @@ export default class Database<DB> {
     }
 
     return transaction;
-  }
-
-  model<T1 extends typeof Model<DB, TableName, IdColumnName>, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(model: T1, table: TableName, id: IdColumnName) {
-    return (new model(this, table, id)) as InstanceType<T1>;
   }
 
   selectFrom<TableName extends keyof DB & string>(table: TableName) {

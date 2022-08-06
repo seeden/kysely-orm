@@ -30,6 +30,10 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     this.id = id;
   }
 
+  static bind<DB, T1 extends typeof Model<DB, TableName, IdColumnName>, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(db: Database<DB>, model: T1, table: TableName, id: IdColumnName) {
+    return (new model(db, table, id)) as InstanceType<T1>;
+  }
+
   async beforeInsert(data: Insertable<DB[TableName]>) {
     return data;
   }
