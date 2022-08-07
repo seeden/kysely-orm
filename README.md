@@ -260,12 +260,28 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     return this.db.transaction(callback);
   }
 
+  selectFrom() {
+    return this.db.selectFrom(this.table);
+  }
+
+  updateTable() {
+    return this.db.updateTable(this.table);
+  }
+
+  insertInto() {
+    return this.db.insertInto(this.table);
+  }
+
+  deleteFrom() {
+    return this.db.deleteFrom(this.table);
+  }
+
   find<ColumnName extends keyof DB[TableName] & string>(
     column: ColumnName,
     values: SelectType<DB[TableName][ColumnName]>[],
   ) {
-    return this.db
-      .selectFrom(this.table)
+    return this
+      .selectFrom()
       .where(this.db.dynamic.ref(column as string), 'in', values)
       .selectAll()
       .limit(1)
@@ -276,8 +292,8 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     column: ColumnName,
     value: SelectType<DB[TableName][ColumnName]>,
   ) {
-    return this.db
-      .selectFrom(this.table)
+    return this
+      .selectFrom()
       .where(this.db.dynamic.ref(column as string), '=', value)
       .selectAll()
       .limit(1)
@@ -297,8 +313,8 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     value: SelectType<DB[TableName][ColumnName]>,
     error: typeof NoResultError = NoResultError,
   ) {
-    return this.db
-      .selectFrom(this.table)
+    return this
+      .selectFrom()
       .where(this.db.dynamic.ref(column as string), '=', value)
       .selectAll()
       .limit(1)
@@ -316,8 +332,8 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
   ) {
     const processedData = await this.beforeUpdate(data);
 
-    return this.db
-      .updateTable(this.table)
+    return this
+      .updateTable()
       .where(this.db.dynamic.ref(column as string), '=', value)
       .set(processedData)
       .returningAll()
@@ -336,8 +352,8 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
   ) {
     const processedData = await this.beforeUpdate(data);
 
-    return this.db
-      .updateTable(this.table)
+    return this
+      .updateTable()
       .where(this.db.dynamic.ref(column as string), '=', value)
       .set(processedData)
       .returningAll()
@@ -352,8 +368,8 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     column: ColumnName,
     value: SelectType<DB[TableName][ColumnName]>,
   ) {
-    return this.db
-      .selectFrom(this.table)
+    return this
+      .selectFrom()
       .where(this.db.dynamic.ref(column as string), '=', value)
       .selectAll()
       .forUpdate()
@@ -370,8 +386,8 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
   ) {
     const processedValues = await this.beforeInsert(values);
 
-    return this.db
-      .insertInto(this.table)
+    return this
+      .insertInto()
       .values(processedValues)
       .returningAll()
       .executeTakeFirstOrThrow(error);
@@ -382,8 +398,8 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     value: SelectType<DB[TableName][ColumnName]>,
     error: typeof NoResultError = NoResultError,
   ) {
-    const { numDeletedRows } = await this.db
-      .deleteFrom(this.table)
+    const { numDeletedRows } = await this
+      .deleteFrom()
       .where(this.db.dynamic.ref(column as string), '=', value)
       .executeTakeFirstOrThrow(error);
 
@@ -395,8 +411,8 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     values: SelectType<DB[TableName][ColumnName]>[],
     error: typeof NoResultError = NoResultError,
   ) {
-    const { numDeletedRows } = await this.db
-      .deleteFrom(this.table)
+    const { numDeletedRows } = await this
+      .deleteFrom()
       .where(this.db.dynamic.ref(column as string), 'in', values)
       .executeTakeFirstOrThrow(error);
 
