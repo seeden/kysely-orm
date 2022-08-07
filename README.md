@@ -17,6 +17,10 @@ export default new Database({
 import { Model } from 'kysely-orm';
 
 export default class User extends Model<DB, 'users', 'id'> {
+  static bind<DB>(db: Database<DB>) {
+    return new User(db, 'users', 'id');
+  }
+
   findByEmail(email: string) {
     return this.findOne('email', email);
   }
@@ -27,11 +31,11 @@ export default class User extends Model<DB, 'users', 'id'> {
 
 ```ts ./models/index.ts
 import db from '../config/db';
-import User from './User';
-import Post from './Post';
+import UserClass from './User';
+import PostClass from './Post';
 
-export const User = new User(db, 'users', 'id');
-export const Post = new Post(db, 'posts', 'uuid');
+export const User = new UserClass(db, 'users', 'id'); // or use your const User = UserClass.bind(db);
+export const Post = new PostClass(db, 'posts', 'uuid');
 ```
 
 # Define service
@@ -157,6 +161,9 @@ import { User } from '../models';
 const IsolatedUserModel = User.isolate();
 ```
 
+For example why to use it: 
+1. when your model is using dataloaders
+2. when your model is storing data and using it later
 
 # Plugins
 
@@ -183,10 +190,49 @@ export default class User extends applyPlugins<DB, 'users', 'id'>(Model, 'users'
 }
 ```
 
+## Plugin updatedAt
+
+It will set your db field to NOW() during any update
+
+```ts 
+import { applyPlugins, updatedAt } from 'kysely-orm';
+import type DB from './@types/DB';
+
+export default class User extends applyPlugins<DB, 'users', 'id'>(Model, 'users', 'id', [
+  updatedAt('updatedAt'),
+]) {
+  findByEmail(email: string) {
+    return this.findOne('email', email);
+  }
+}
+```
+
+## Plugin slug
+
+It will automatically compute url slug from your data and use it during db insert
+
+```ts 
+import { applyPlugins, slug } from 'kysely-orm';
+import type DB from './@types/DB';
+
+export default class User extends applyPlugins<DB, 'users', 'id'>(Model, 'users', 'id', [
+  slug({
+    field: 'slug',
+    sources: ['name', 'firstName', 'lastName'],
+    slugOptions: {
+      truncate: 15,
+    },
+  }),
+]) {
+  findByEmail(email: string) {
+    return this.findOne('email', email);
+  }
+}
+```
+
 # Standard Model functions
 
 ```ts
-
 export default class Model<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string> extends ModelBase<DB> {
   readonly table: TableName;
   readonly id: IdColumnName;
@@ -206,18 +252,12 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     return data;
   }
 
-  bind(db: Database<DB>) {
-    return new (this.constructor as typeof Model)(db, this.table, this.id);
+  isolate() {
+    return new (this.constructor as typeof Model)(this.db, this.table, this.id);
   }
 
-  transaction<Type>(callback: (model: Model<DB, TableName, IdColumnName>) => Promise<Type>) {
-    if (this.db.isTransaction) {
-      return callback(this);
-    }
-
-    return this.db.transaction<Type>((trx) => {
-      return callback(this.bind(trx));
-    });
+  transaction<Type>(callback: TransactionCallback<DB, Type>) {
+    return this.db.transaction(callback);
   }
 
   find<ColumnName extends keyof DB[TableName] & string>(
@@ -244,7 +284,6 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
       .executeTakeFirst();
   }
 
-  /* Finds a single row by its id column. Returns undefined if row does not exists. */
   findById(id: SelectType<DB[TableName][IdColumnName]>) {
     return this.findOne(this.id, id);
   }
@@ -266,7 +305,6 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
       .executeTakeFirstOrThrow(error);
   }
 
-  /* Finds a single row by its id column. Throw error if row does not exists. */
   getById(id: SelectType<DB[TableName][IdColumnName]>) {
     return this.getOne(this.id, id);
   }

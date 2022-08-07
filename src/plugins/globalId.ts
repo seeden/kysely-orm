@@ -29,7 +29,6 @@ function fromGlobalId<IdType>(globalId: string): {
   };
 }
 
-
 export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(ModelClass: typeof Model<DB, TableName, IdColumnName>) {
   type IdColumn = SelectType<DB[TableName][IdColumnName]>;
 

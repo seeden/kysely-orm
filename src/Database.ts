@@ -31,7 +31,6 @@ export default class Database<DB> {
   constructor(config: DatabaseConfig<DB>) {
     if ('kysely' in config) {
       this.kysely = config.kysely;
-
     } else {
       const { connectionString } = config;
       this.kysely = new Kysely<DB>({

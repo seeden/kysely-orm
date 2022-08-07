@@ -1,5 +1,6 @@
 import Model from './Model';
 import Database from './Database';
+import applyPlugins from './plugins/applyPlugins';
 
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
@@ -15,6 +16,31 @@ interface DB {
   users2: Users;
 };
 
+const db = new Database<DB>({
+  connectionString: process.env.DATASABE_URL,
+});
+
+export default class UserModel extends applyPlugins<DB, 'users', 'id'>(Model, 'users', 'id', [
+]) {
+  static bind<DB>(db: Database<DB>) {
+    return new UserModel(db, 'users', 'id');
+  }
+
+  findByEmail(email: string) {
+    return this.findOne('email', email);
+  }
+}
+/*
+
+class UserModel extends Model<DB, 'users', 'id'> {
+  findByEmail(email: string) {
+    return this.findOne('email', email);
+  }
+}
+*/
+
+
+/*
 class UserModel extends Model<DB, 'users', 'id'> {
   static bind(db: Database<DB>) {
     return super.bind(db, this, 'users', 'id')
@@ -25,10 +51,8 @@ class UserModel extends Model<DB, 'users', 'id'> {
   }
 }
 
-const db = new Database<DB>({
-  connectionString: process.env.DATASABE_URL,
-});
 
+/*
 const User = UserModel.bind(db);
 
 describe('transactions', () => {
@@ -74,3 +98,5 @@ describe('transactions', () => {
     console.log('user 2', user);
   });
 });
+
+*/
