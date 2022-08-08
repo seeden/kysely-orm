@@ -80,7 +80,7 @@ export default function slug<
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string
 >(options: Options<DB, TableName>) {
-  return (ModelClass: typeof Model<DB, TableName, IdColumnName>) => class extends ModelClass {
+  return (ModelClass: typeof Model<DB, TableName, IdColumnName>) => class SlugClass extends ModelClass {
     async beforeInsert(data: Insertable<DB[TableName]>) {
       const { field } = options;
 

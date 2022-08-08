@@ -42,18 +42,22 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
     return this.db.transaction(callback);
   }
 
+  // protected in feature
   selectFrom() {
     return this.db.selectFrom(this.table);
   }
 
+  // protected in feature
   updateTable() {
     return this.db.updateTable(this.table);
   }
 
+  // protected in feature
   insertInto() {
     return this.db.insertInto(this.table);
   }
 
+  // protected in feature
   deleteFrom() {
     return this.db.deleteFrom(this.table);
   }

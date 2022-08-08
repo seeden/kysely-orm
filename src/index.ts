@@ -7,6 +7,8 @@ import updatedAt from './plugins/updatedAt';
 import slug from './plugins/slug';
 import globalId from './plugins/globalId';
 
+import isolateModels from './utils/isolateModels';
+
 export {
   Database,
   Model,
@@ -16,6 +18,9 @@ export {
   updatedAt,
   slug,
   globalId,
+
+  // utils
+  isolateModels,
 
   // kysely reexport
   NoResultError,

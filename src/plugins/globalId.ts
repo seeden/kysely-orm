@@ -61,6 +61,11 @@ export default function globalId<DB, TableName extends keyof DB & string, IdColu
       const id = this.getLocalId(globalId) as IdColumn;
       return this.getById(id);
     }
+
+    findByGlobalIds(globalIds: string[]) {
+      const ids = globalIds.map((globalId) => this.getLocalId(globalId) as IdColumn);
+      return this.findByIds(ids);
+    }
   };
 }
   
