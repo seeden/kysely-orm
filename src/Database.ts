@@ -1,13 +1,16 @@
 import { Kysely, PostgresDialect, CamelCasePlugin } from 'kysely';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import assign, { type Assign } from './mixins/assign';
+import model, { type Model } from './mixins/model';
 
 export type DatabaseConfig<DB> = {
+  isolated?: boolean;
+} & ({
   connectionString: string;
 } | {
   kysely: Kysely<DB>;
-  asyncLocalDb: AsyncLocalStorage<Kysely<DB>>;
-};
+});
 
 type AfterCommitCallback = () => Promise<any>;
 
@@ -27,8 +30,11 @@ export type TransactionCallback<DB, Type> = (trx: TransactionResponse<DB>) => Pr
 export default class Database<DB> {
   private kysely: Kysely<DB>;
   private asyncLocalDb = new AsyncLocalStorage<TransactionState<DB>>();
+  readonly isolated;
 
   constructor(config: DatabaseConfig<DB>) {
+    this.isolated = config.isolated ?? false;
+
     if ('kysely' in config) {
       this.kysely = config.kysely;
     } else {
@@ -48,8 +54,17 @@ export default class Database<DB> {
             console.log(event?.query?.parameters)
           }
         },
-      });
-    }    
+      });  
+    }
+  }
+
+  model<
+    TableName extends keyof DB & string, 
+    IdColumnName extends keyof DB[TableName] & string
+  >(table: TableName, id: IdColumnName) {
+    type Table = DB[TableName];
+    const BaseClass = assign<Table>();
+    return model(BaseClass, this, table, id);
   }
 
   get dynamic() {
@@ -92,6 +107,10 @@ export default class Database<DB> {
 
   deleteFrom<TableName extends keyof DB & string>(table: TableName) {
     return this.db.deleteFrom(table);
+  }
+
+  destroy() {
+    return this.db.destroy();
   }
 
   transaction<Type>(callback: TransactionCallback<DB, Type>) {

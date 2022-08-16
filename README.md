@@ -14,45 +14,22 @@ export default new Database({
 # Define Model
 
 ```ts ./models/User.ts
-import { Model } from 'kysely-orm';
+import db from './db';
 
-export default class User extends Model<DB, 'users', 'id'> {
-  static bind<DB>(db: Database<DB>) {
-    return new User(db, 'users', 'id');
-  }
-
-  findByEmail(email: string) {
+export default class User extends db.model('users', 'id') {
+  static findByEmail(email: string) {
     return this.findOne('email', email);
   }
 }
 ```
 
-# Connect Models to specific database
+## Export all models
 
 ```ts ./models/index.ts
-import db from '../config/db';
-import UserClass from './User';
-import PostClass from './Post';
-
-export const User = new UserClass(db, 'users', 'id'); // or use your const User = UserClass.bind(db);
-export const Post = new PostClass(db, 'posts', 'uuid');
+export { default as User } from './User';
+export { default as Post } from './Post';
 ```
 
-# Define service
-
-```ts ./services/user.ts
-import { User } from '../models';
-
-async function createUser(data) {
-  const { email } = data;
-  const user = await User.findByEmail(email);
-  if (user) {
-    throw new Error('User already exists');
-  }
-
-  ...
-}
-```
 
 # Transactions
 
@@ -61,7 +38,7 @@ import { User, Post } from '../models';
 
 async function createUser(data) {
   const newUser = User.transaction(async () => {
-    const user = await User.findByEmail(email);
+    const user = await User.findByEmail(email); // user instanceof User; === true
     if (user) {
       throw new Error('User already exists');
     }
@@ -98,6 +75,19 @@ async function createUser(data) {
   ...
 }
 ```
+
+### AsyncLocalStorage pitfalls
+
+If you are using everywhere async/await, you should be fine.
+If you need to use a callback, you have two options:
+1. use utils.promisify and stay with async/await (preferred option)
+2. use AsyncResource.bind(yourCallback)
+
+Without it, the thread chain will lose transaction details which are hard to track.
+
+Performance of AsyncLocalStorage is fine with Node >=16.2.0. 
+More details you can find here https://github.com/nodejs/node/issues/34493#issuecomment-845094849
+This is the reason why I use it as a minimal nodejs version.
 
 ### How to use multiple transactions
 
@@ -158,24 +148,26 @@ For each http request, you should create a new isolated model instance (best sec
 ```ts
 import { User } from '../models';
 
-const IsolatedUserModel = User.isolate();
+const IsolatedUser = User.isolate();
 ```
 
 For example why to use it: 
 1. when your model is using dataloaders
 2. when your model is storing data and using it later
 
-# Plugins
+# Mixins
 
-Sometimes you want to use same logic across your models. For example automatically set upadatedAt when you update row data.
-Here is example how to define model which has support for plugins.
+Sometimes you want to use same logic across your models. For example automatically set updatedAt when you update row data.
+Here is example how to define model which has support for mixins.
 
 ```ts 
-import { applyPlugins, updatedAt, slug } from 'kysely-orm';
-import type DB from './@types/DB';
+import { applyMixins, updatedAt, slug } from 'kysely-orm';
+import db from './db';
 
-export default class User extends applyPlugins<DB, 'users', 'id'>(Model, 'users', 'id', [
-  updatedAt,
+export default class User extends applyMixins(
+  db, 'users', 'id', 
+  db.model('users', 'id'),
+  updatedAt('updatedAt'),
   slug({
     field: 'username',
     sources: ['name', 'firstName', 'lastName'],
@@ -183,31 +175,33 @@ export default class User extends applyPlugins<DB, 'users', 'id'>(Model, 'users'
       truncate: 15,
     },
   }),
-]) {
+) {
   findByEmail(email: string) {
     return this.findOne('email', email);
   }
 }
 ```
 
-## Plugin updatedAt
+## Mixin updatedAt
 
 It will set your db field to NOW() during any update
 
 ```ts 
-import { applyPlugins, updatedAt } from 'kysely-orm';
-import type DB from './@types/DB';
+import { applyMixins, updatedAt } from 'kysely-orm';
+import db from './db';
 
-export default class User extends applyPlugins<DB, 'users', 'id'>(Model, 'users', 'id', [
+export default class User extends applyMixins(
+  db, 'users', 'id', 
+  db.model('users', 'id'),
   updatedAt('updatedAt'),
-]) {
+) {
   findByEmail(email: string) {
     return this.findOne('email', email);
   }
 }
 ```
 
-## Plugin slug
+## Mixin slug
 
 It will automatically compute url slug from your data and use it during db insert
 
@@ -215,136 +209,164 @@ It will automatically compute url slug from your data and use it during db inser
 import { applyPlugins, slug } from 'kysely-orm';
 import type DB from './@types/DB';
 
-export default class User extends applyPlugins<DB, 'users', 'id'>(Model, 'users', 'id', [
+export default class User extends applyMixins(
+  db, 'users', 'id', 
+  db.model('users', 'id'),
   slug({
-    field: 'slug',
+    field: 'username',
     sources: ['name', 'firstName', 'lastName'],
     slugOptions: {
       truncate: 15,
     },
   }),
-]) {
+) {
   findByEmail(email: string) {
     return this.findOne('email', email);
   }
 }
 ```
 
-# Standard Model functions
+# Standard Model methods and properties
 
 ```ts
-export default class Model<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string> extends ModelBase<DB> {
-  readonly table: TableName;
-  readonly id: IdColumnName;
+class Model {
+  static db = db;
+  static table = table;
+  static id = id;
 
-  constructor(db: Database<DB>, table: TableName, id: IdColumnName) {
-    super(db);
-
-    this.table = table;
-    this.id = id;
+  get $id() {
+    return (<typeof Model>this.constructor).id;
   }
 
-  async beforeInsert(data: Insertable<DB[TableName]>) {
-    return data;
+  get $table() {
+    return (<typeof Model>this.constructor).table;
   }
 
-  async beforeUpdate(data: Updateable<InsertObject<DB, TableName>>) {
-    return data;
+  get $db() {
+    return (<typeof Model>this.constructor).db;
   }
 
-  isolate() {
-    return new (this.constructor as typeof Model)(this.db, this.table, this.id);
+  static create<Instance extends typeof Model, Data>(this: Instance, data: Data) {
+    return new this(data) as InstanceType<Instance>;
   }
 
-  transaction<Type>(callback: TransactionCallback<DB, Type>) {
+  test<Type>(callback: TransactionCallback<DB, Type>) {
+    return db.transaction(callback);
+  }
+
+  static isolate() {
+    return class extends this {};
+  }
+
+  static transaction<Type>(callback: TransactionCallback<DB, Type>) {
     return this.db.transaction(callback);
   }
 
-  selectFrom() {
+  static get dynamic() {
+    return this.db.dynamic;
+  }
+
+  static ref(reference: string) {
+    return this.db.dynamic.ref(reference);
+  }
+
+  static get fn() {
+    return this.db.fn;
+  }
+
+  static selectFrom() {
     return this.db.selectFrom(this.table);
   }
 
-  updateTable() {
+  static updateTable() {
     return this.db.updateTable(this.table);
   }
 
-  insertInto() {
+  static insertInto() {
     return this.db.insertInto(this.table);
   }
 
-  deleteFrom() {
+  static deleteFrom() {
     return this.db.deleteFrom(this.table);
   }
 
-  find<ColumnName extends keyof DB[TableName] & string>(
+  static async find<Instance extends typeof Model, ColumnName extends keyof DB[TableName] & string>(
+    this: Instance,
     column: ColumnName,
     values: SelectType<DB[TableName][ColumnName]>[],
   ) {
-    return this
+    const items = await this
       .selectFrom()
-      .where(this.db.dynamic.ref(column as string), 'in', values)
+      .where(this.ref(column as string), 'in', values)
       .selectAll()
-      .limit(1)
       .execute();
+
+    return items?.map(item => new this(item) as InstanceType<Instance>);
   }
 
-  findOne<ColumnName extends keyof DB[TableName] & string>(
+  static async findOne<ColumnName extends keyof DB[TableName] & string>(
     column: ColumnName,
     value: SelectType<DB[TableName][ColumnName]>,
   ) {
-    return this
+    const item = await this
       .selectFrom()
-      .where(this.db.dynamic.ref(column as string), '=', value)
+      .where(this.ref(column as string), '=', value)
       .selectAll()
       .limit(1)
       .executeTakeFirst();
+
+    return item && this.create(item);
   }
 
-  findById(id: SelectType<DB[TableName][IdColumnName]>) {
+  static findById(id: SelectType<DB[TableName][IdColumnName]>) {
     return this.findOne(this.id, id);
   }
 
-  findByIds(ids: SelectType<DB[TableName][IdColumnName]>[]) {
+  static findByIds(ids: SelectType<DB[TableName][IdColumnName]>[]) {
     return this.find(this.id, ids);
   }
 
-  getOne<ColumnName extends keyof DB[TableName] & string>(
+  static async getOne<ColumnName extends keyof DB[TableName] & string>(
     column: ColumnName,
     value: SelectType<DB[TableName][ColumnName]>,
     error: typeof NoResultError = NoResultError,
   ) {
-    return this
+    const item = await this
       .selectFrom()
-      .where(this.db.dynamic.ref(column as string), '=', value)
+      .where(this.ref(column as string), '=', value)
       .selectAll()
       .limit(1)
       .executeTakeFirstOrThrow(error);
+
+    return this.create(item);
   }
 
-  getById(id: SelectType<DB[TableName][IdColumnName]>) {
+  static getById(id: SelectType<DB[TableName][IdColumnName]>) {
     return this.getOne(this.id, id);
   }
   
-  async findOneAndUpdate<ColumnName extends keyof DB[TableName] & string>(
+  static async findOneAndUpdate<ColumnName extends keyof DB[TableName] & string>(
     column: ColumnName,
     value: SelectType<DB[TableName][ColumnName]>,
     data: Updateable<InsertObject<DB, TableName>>,
   ) {
     const processedData = await this.beforeUpdate(data);
 
-    return this
+    const item = await this
       .updateTable()
-      .where(this.db.dynamic.ref(column as string), '=', value)
+      .where(this.ref(column as string), '=', value)
       .set(processedData)
       .returningAll()
       .executeTakeFirst();
+
+    return item && this.create(item);
   }
 
-  findByIdAndUpdate(id: SelectType<DB[TableName][IdColumnName]>, data: Updateable<InsertObject<DB, TableName>>) {
+  static findByIdAndUpdate(id: SelectType<DB[TableName][IdColumnName]>, data: Updateable<InsertObject<DB, TableName>>) {
     return this.findOneAndUpdate(this.id, id, data);
   }
   
-  async getOneAndUpdate<ColumnName extends keyof DB[TableName] & string>(
+  static async getOneAndUpdate<ColumnName extends keyof DB[TableName] & string>(
     column: ColumnName,
     value: SelectType<DB[TableName][ColumnName]>,
     data: Updateable<InsertObject<DB, TableName>>,
@@ -352,74 +374,78 @@ export default class Model<DB, TableName extends keyof DB & string, IdColumnName
   ) {
     const processedData = await this.beforeUpdate(data);
 
-    return this
+    const item = await this
       .updateTable()
-      .where(this.db.dynamic.ref(column as string), '=', value)
+      .where(this.ref(column as string), '=', value)
       .set(processedData)
       .returningAll()
       .executeTakeFirstOrThrow(error);
+
+    return this.create(item);
   }
 
-  getByIdAndUpdate(id: SelectType<DB[TableName][IdColumnName]>, data: Updateable<InsertObject<DB, TableName>>) {
+  static getByIdAndUpdate(id: SelectType<DB[TableName][IdColumnName]>, data: Updateable<InsertObject<DB, TableName>>) {
     return this.getOneAndUpdate(this.id, id, data);
   }
   
-  lock<ColumnName extends keyof DB[TableName] & string>(
+  static lock<ColumnName extends keyof DB[TableName] & string>(
     column: ColumnName,
     value: SelectType<DB[TableName][ColumnName]>,
   ) {
     return this
       .selectFrom()
-      .where(this.db.dynamic.ref(column as string), '=', value)
+      .where(this.ref(column as string), '=', value)
       .selectAll()
       .forUpdate()
       .executeTakeFirst();
   }
 
-  lockById(id: SelectType<DB[TableName][IdColumnName]>) {
+  static lockById(id: SelectType<DB[TableName][IdColumnName]>) {
     return this.lock(this.id, id);
   }
   
-  async insert(
+  static async insert(
     values: Insertable<DB[TableName]>,
     error: typeof NoResultError = NoResultError,
   ) {
     const processedValues = await this.beforeInsert(values);
 
-    return this
+    const item = await this
       .insertInto()
       .values(processedValues)
       .returningAll()
       .executeTakeFirstOrThrow(error);
+
+    return this.create(item);
   }
   
-  async deleteOne<ColumnName extends keyof DB[TableName] & string>(
+  static async deleteOne<ColumnName extends keyof DB[TableName] & string>(
     column: ColumnName,
     value: SelectType<DB[TableName][ColumnName]>,
     error: typeof NoResultError = NoResultError,
   ) {
     const { numDeletedRows } = await this
       .deleteFrom()
-      .where(this.db.dynamic.ref(column as string), '=', value)
+      .where(this.ref(column as string), '=', value)
       .executeTakeFirstOrThrow(error);
 
     return numDeletedRows;
   }
 
-  async deleteMany<ColumnName extends keyof DB[TableName] & string>(
+  static async deleteMany<ColumnName extends keyof DB[TableName] & string>(
     column: ColumnName,
     values: SelectType<DB[TableName][ColumnName]>[],
     error: typeof NoResultError = NoResultError,
   ) {
     const { numDeletedRows } = await this
       .deleteFrom()
-      .where(this.db.dynamic.ref(column as string), 'in', values)
+      .where(this.ref(column as string), 'in', values)
       .executeTakeFirstOrThrow(error);
 
     return numDeletedRows;
   }
 
-  deleteById(id: SelectType<DB[TableName][IdColumnName]>) {
+  static deleteById(id: SelectType<DB[TableName][IdColumnName]>) {
     return this.deleteOne(this.id, id);
   }
 }

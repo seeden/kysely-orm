@@ -1,6 +1,6 @@
-import type Model from '../Model';
+import { type Model } from '../mixins/model';
 
-export default function isolateModels<Models extends { [key in keyof Models]: Model<any, any, any>}>(models: Models): Models {
+export default function isolateModels<Models extends Record<string, Model<any, any, any, any>>>(models: Models): Models {
   const isolatedModels: Models = {
     ...models,
   };
@@ -8,7 +8,8 @@ export default function isolateModels<Models extends { [key in keyof Models]: Mo
   const modelNames = Object.keys(models) as (keyof Models)[];
 
   modelNames.forEach((key) => {
-    isolatedModels[key] = models[key].isolate() as Models[typeof key];
+    const ModelClass = models[key];
+    isolatedModels[key] = ModelClass.isolate() as typeof ModelClass;
   });
 
   return isolatedModels;

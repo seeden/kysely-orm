@@ -1,26 +1,24 @@
-import { NoResultError, sql } from 'kysely';
+import { NoResultError, sql, type Selectable } from 'kysely';
 
 import Database from './Database';
-import Model, { type ModelType } from './Model';
-import applyPlugins from './plugins/applyPlugins';
-import updatedAt from './plugins/updatedAt';
-import slug from './plugins/slug';
-import globalId from './plugins/globalId';
+import applyMixins from './utils/applyMixins';
+import updatedAt from './mixins/updatedAt';
+import slug from './mixins/slug';
+import globalId from './mixins/globalId';
 
 import isolateModels from './utils/isolateModels';
 
 export {
   Database,
-  Model,
 
-  // plugins
-  applyPlugins,
+  // mixins
   updatedAt,
   slug,
   globalId,
 
   // utils
   isolateModels,
+  applyMixins,
 
   // kysely reexport
   NoResultError,
@@ -28,4 +26,4 @@ export {
 };
 
 // types
-export type { ModelType };
+export type ModelType<Table> = Selectable<Table>;
