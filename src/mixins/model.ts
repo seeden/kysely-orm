@@ -35,7 +35,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
       return class extends this {};
     }
 
-    static create<Instance extends typeof Model, Data>(this: Instance, data: Data) {
+    static createInstance<Instance extends typeof Model, Data>(this: Instance, data: Data) {
       return new this(data) as InstanceType<Instance>;
     }
 
@@ -96,7 +96,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .limit(1)
         .executeTakeFirst();
 
-      return item && this.create(item);
+      return item && this.createInstance(item);
     }
 
     static findById(id: SelectType<DB[TableName][IdColumnName]>) {
@@ -119,7 +119,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .limit(1)
         .executeTakeFirstOrThrow(error);
 
-      return this.create(item);
+      return this.createInstance(item);
     }
 
     static getById(id: SelectType<DB[TableName][IdColumnName]>) {
@@ -140,7 +140,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .returningAll()
         .executeTakeFirst();
 
-      return item && this.create(item);
+      return item && this.createInstance(item);
     }
 
     static findByIdAndUpdate(id: SelectType<DB[TableName][IdColumnName]>, data: Updateable<InsertObject<DB, TableName>>) {
@@ -162,7 +162,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .returningAll()
         .executeTakeFirstOrThrow(error);
 
-      return this.create(item);
+      return this.createInstance(item);
     }
 
     static getByIdAndUpdate(id: SelectType<DB[TableName][IdColumnName]>, data: Updateable<InsertObject<DB, TableName>>) {
@@ -197,7 +197,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .returningAll()
         .executeTakeFirstOrThrow(error);
 
-      return this.create(item);
+      return this.createInstance(item);
     }
     
     static async deleteOne<ColumnName extends keyof DB[TableName] & string>(

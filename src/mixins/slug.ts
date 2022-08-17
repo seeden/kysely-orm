@@ -96,7 +96,7 @@ export default function slug<DB, TableName extends keyof DB & string, IdColumnNa
           .limit(1)
           .executeTakeFirst();
 
-        return item && this.create(item);
+        return item && this.createInstance(item);
       }
 
       static async generateSlug(data: Insertable<DB[TableName]>): Promise<string> {
