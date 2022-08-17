@@ -9,6 +9,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     static table: TableName = table;
     static id: IdColumnName = id;
 
+    /*
     get $id() {
       return (<typeof Model>this.constructor).id;
     }
@@ -20,6 +21,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     get $db() {
       return (<typeof Model>this.constructor).db;
     }
+    */
 
     static async beforeInsert(data: Insertable<DB[TableName]>) {
       return data;
@@ -35,10 +37,6 @@ export default function model<TBase extends Constructor, DB, TableName extends k
 
     static create<Instance extends typeof Model, Data>(this: Instance, data: Data) {
       return new this(data) as InstanceType<Instance>;
-    }
-
-    test<Type>(callback: TransactionCallback<DB, Type>) {
-      return db.transaction(callback);
     }
 
     static transaction<Type>(callback: TransactionCallback<DB, Type>) {
