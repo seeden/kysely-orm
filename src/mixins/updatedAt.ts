@@ -12,14 +12,6 @@ export default function updatedAt<DB, TableName extends keyof DB & string, IdCol
           [field]: sql`NOW()`,
         };
       }
-
-      static omgggggg() {
-        return 'omgggggg';
-      }
-
-      get updatedAtMeMber() {
-        return 'updatedAtMeMber';
-      }
     }
   }
 }
