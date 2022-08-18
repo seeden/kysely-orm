@@ -30,13 +30,13 @@ function fromGlobalId<IdType>(globalId: string): {
   };
 }
 
-
 export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>() {
-  type IdColumn = SelectType<DB[TableName][IdColumnName]>;
-
-  return <TBase extends Model<Constructor, DB, TableName, IdColumnName>>(Base: TBase) => {
+  return <TBase extends Constructor>(Base: Model<TBase, any, any, IdColumnName>) => {
+    type Table = DB[TableName];
+    type IdColumn = SelectType<Table[IdColumnName]>;
+    
     return class GlobalId extends Base {
-      static getGlobalId(data: DB[TableName]): string {
+      static getGlobalId(data: Table): string {
         const value = data[this.id];
         if (typeof value === 'string' || typeof value === 'number') {
           return base64([this.table, value.toString()].join(':'));
@@ -54,17 +54,17 @@ export default function globalId<DB, TableName extends keyof DB & string, IdColu
   
         return id;
       }
-  
+
       static findByGlobalId(globalId: string) {
         const id = this.getLocalId(globalId) as IdColumn;
         return this.findById(id);
       }
-  
+
       static getByGlobalId(globalId: string) {
         const id = this.getLocalId(globalId) as IdColumn;
         return this.getById(id);
       }
-  
+
       static findByGlobalIds(globalIds: string[]) {
         const ids = globalIds.map((globalId) => this.getLocalId(globalId) as IdColumn);
         return this.findByIds(ids);

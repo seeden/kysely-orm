@@ -1,10 +1,11 @@
 import { sql, type Updateable, type InsertObject } from 'kysely';
-import { type Model } from './model';
-import type Constructor from '../@types/Constructor';
+import model, { type Model, type Updatable } from './model';
+import Constructor from '../@types/Constructor';
 
-export default function updatedAt<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>( field: keyof DB[TableName] & string) {
-  return <TBase extends Model<Constructor, DB, TableName, IdColumnName>>(Base: TBase) => {
-    return class UpdatedAt extends Base {
+
+function updatedAt<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(field: keyof DB[TableName] & string) {
+  return <TBase extends Constructor>(Base: Model<TBase, DB, any, any>) => {
+    return class UpdatedAt extends Base  {
       static async beforeUpdate(data: Updateable<InsertObject<DB, TableName>>) {
   
         return {
@@ -16,3 +17,4 @@ export default function updatedAt<DB, TableName extends keyof DB & string, IdCol
   }
 }
 
+export default updatedAt;

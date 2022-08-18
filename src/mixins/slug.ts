@@ -77,18 +77,19 @@ function generate<DB, TableName extends keyof DB>(data: Data, options: Options<D
 }
 
 export default function slug<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(options: Options<DB, TableName>) {
-  return <TBase extends Model<Constructor, DB, TableName, IdColumnName>>(Base: TBase) => {
+  return <TBase extends Constructor>(Base: Model<TBase, DB, any, any>) => {
+    type Table = DB[TableName];
     return class Slug extends Base {
-      static async beforeInsert(data: Insertable<DB[TableName]>) {
+      static async beforeInsert(data: Insertable<Table>) {
         const { field } = options;
 
         return {
-          ...await super.beforeInsert(data),
+          ...await Base.beforeInsert(data),
           [field]: await this.generateSlug(data),
         };
       }
 
-      static async findBySlug(value: string, column: keyof DB[TableName] & string = options.field) {
+      static async findBySlug(value: string, column: keyof Table & string = options.field) {
         const item = await this
           .selectFrom()
           .selectAll()
@@ -99,7 +100,7 @@ export default function slug<DB, TableName extends keyof DB & string, IdColumnNa
         return item && this.createInstance(item);
       }
 
-      static async generateSlug(data: Insertable<DB[TableName]>): Promise<string> {
+      static async generateSlug(data: Insertable<Table>): Promise<string> {
         const { field } = options;
       
         // generate slug

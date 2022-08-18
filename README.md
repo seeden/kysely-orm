@@ -1,13 +1,53 @@
 # kysely-orm
-TypeSafe ORM for kysely library
+TypeSafe ORM for [kysely library](https://github.com/koskimas/kysely)
+
+# Define TypeSafe DB structure
+
+```ts ./@types/Database
+import { type Generated } from 'kysely';
+
+interface Users {
+  id: Generated<number>;
+  name: string;
+  email: string;
+}
+
+interface Books {
+  id: Generated<number>;
+  title: string;
+  userId: number;
+}
+
+interface DB {
+  users: Users;
+  books: Books;
+};
+```
+
+I will recommend using [library kysely-codegen](https://github.com/RobinBlomberg/kysely-codegen) for autogenerating this structure. 
 
 # Define Database connection
 
 ```ts: ./config/db.ts
 import { Database } from 'kysely-orm';
+import type DB from './@types/Database';
+
+export default new Database<DB>({
+  connectionString: '...',
+});
+```
+
+## How to use kysely instance directly
+
+```ts: ./config/db.ts
+import { Database } from 'kysely-orm';
+import { Kysely } from 'kysely';
+import type DB from './@types/Database';
+
+const kysely = new Kysely<DB>(...);
 
 export default new Database({
-  connectionString: '...',
+  kysely,
 });
 ```
 
@@ -27,14 +67,13 @@ export default class User extends db.model('users', 'id') {
 
 ```ts ./models/index.ts
 export { default as User } from './User';
-export { default as Post } from './Post';
+export { default as Book } from './Book';
 ```
-
 
 # Transactions
 
 ```ts 
-import { User, Post } from '../models';
+import { User, Book } from '../models';
 
 async function createUser(data) {
   const newUser = User.transaction(async () => {
@@ -60,7 +99,7 @@ Model.transaction is alias for db.transaction
 
 ```ts
 import db from '../config/db';
-import { User, Post } from '../models';
+import { User, Book } from '../models';
 
 async function createUser(data) {
   const newUser = db.transaction(async () => {
@@ -94,7 +133,7 @@ This is the reason why I use it as a minimal nodejs version.
 Working with multiple models and different transactions is not an easy task. For this purpose you can use
 
 ```ts
-import { User, Post } from '../models';
+import { User } from '../models';
 
 async function createUsers(userData1, userData2) {
   const [user1, user2] = await Promise.all([
@@ -112,7 +151,7 @@ A transaction object allows tracking if and when it is committed.
 An afterCommit hook can be added to both managed and unmanaged transaction objects:
 
 ```ts 
-import { User, Post } from '../models';
+import { User } from '../models';
 
 async function createUser(data) {
   const newUser = User.transaction(async ({ afterCommit }) => {
@@ -161,10 +200,25 @@ Sometimes you want to use same logic across your models. For example automatical
 Here is example how to define model which has support for mixins.
 
 ```ts 
+import { applyMixins, updatedAt } from 'kysely-orm';
+import db from './db';
+
+class User extends updatedAt<DB, 'users', 'id'>('updatedAt')(db.model('users', 'id')) {
+  findByEmail(email: string) {
+    return this.findOne('email', email);
+  }
+}
+```
+
+## Helper applyMixins 
+
+If you are using many mixins it can be complicated and messy. Therefore you can use applyMixin which will help you to write "nicer" code.
+
+```ts 
 import { applyMixins, updatedAt, slug } from 'kysely-orm';
 import db from './db';
 
-export default class User extends applyMixins(
+class User extends applyMixins(
   db, 'users', 'id', 
   db.model('users', 'id'),
   updatedAt('updatedAt'),
