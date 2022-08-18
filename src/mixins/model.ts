@@ -11,7 +11,7 @@ export abstract class Instacable {
   static createInstance: <Data>(data: Data) => Promise<Data>;
 }
 
-export default function model<TBase extends Constructor, DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(Base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) {
+export default function model<TBase extends Constructor, DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(Base: TBase, db: Database<DB>, table: TableName, id: IdColumnName, NotFoundError: typeof NoResultError = NoResultError) {
   type Table = DB[TableName];
   type IdColumn = Table[IdColumnName];
 
@@ -147,7 +147,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
 
     static async findOneByFields(fields: Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
-    }>, error: typeof NoResultError = NoResultError) {
+    }>, error: typeof NoResultError = NotFoundError) {
       const item = await this
         .selectFrom()
         .where((qb) => {
@@ -169,7 +169,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
 
     static async getOneByFields(fields: Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
-    }>, error: typeof NoResultError = NoResultError) {
+    }>, error: typeof NoResultError = NotFoundError) {
       const item = await this
         .selectFrom()
         .where((qb) => {
@@ -200,7 +200,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     static async getOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: SelectType<Table[ColumnName]>,
-      error: typeof NoResultError = NoResultError,
+      error: typeof NoResultError = NotFoundError,
     ) {
       const item = await this
         .selectFrom()
@@ -292,7 +292,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>, 
       data: Updateable<InsertObject<DB, TableName>>,
-      error: typeof NoResultError = NoResultError,
+      error: typeof NoResultError = NotFoundError,
     ) {
 
       // TODO use with and select with limit 1
@@ -324,7 +324,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
       column: ColumnName,
       value: SelectType<Table[ColumnName]>,
       data: Updateable<InsertObject<DB, TableName>>,
-      error: typeof NoResultError = NoResultError,
+      error: typeof NoResultError = NotFoundError,
     ) {
       const processedData = await this.beforeUpdate(data);
 
@@ -360,7 +360,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     
     static async insert(
       values: Insertable<Table>,
-      error: typeof NoResultError = NoResultError,
+      error: typeof NoResultError = NotFoundError,
     ) {
       const processedValues = await this.beforeInsert(values);
 
@@ -376,7 +376,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     static async deleteOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: SelectType<Table[ColumnName]>,
-      error: typeof NoResultError = NoResultError,
+      error: typeof NoResultError = NotFoundError,
     ) {
       const { numDeletedRows } = await this
         .deleteFrom()
@@ -389,7 +389,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     static async deleteMany<ColumnName extends keyof Table & string>(
       column: ColumnName,
       values: SelectType<Table[ColumnName]>[],
-      error: typeof NoResultError = NoResultError,
+      error: typeof NoResultError = NotFoundError,
     ) {
       const { numDeletedRows } = await this
         .deleteFrom()
