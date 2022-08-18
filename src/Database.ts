@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect, CamelCasePlugin } from 'kysely';
+import { Kysely, PostgresDialect, CamelCasePlugin, type NoResultError } from 'kysely';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import assign, { type Assign } from './mixins/assign';
@@ -61,10 +61,10 @@ export default class Database<DB> {
   model<
     TableName extends keyof DB & string, 
     IdColumnName extends keyof DB[TableName] & string
-  >(table: TableName, id: IdColumnName) {
+  >(table: TableName, id: IdColumnName, error?: typeof NoResultError) {
     type Table = DB[TableName];
     const BaseClass = assign<Table>();
-    return model(BaseClass, this, table, id);
+    return model(BaseClass, this, table, id, error);
   }
 
   get dynamic() {
