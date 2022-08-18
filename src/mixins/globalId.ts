@@ -31,7 +31,7 @@ function fromGlobalId<IdType>(globalId: string): {
 }
 
 export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>() {
-  return <TBase extends Constructor>(Base: Model<TBase, any, any, IdColumnName>) => {
+  return <TBase extends Constructor>(Base: Model<TBase, DB, TableName, IdColumnName>) => {
     type Table = DB[TableName];
     type IdColumn = SelectType<Table[IdColumnName]>;
     

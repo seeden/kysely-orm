@@ -7,11 +7,21 @@ export abstract class Updatable {
   static beforeUpdate: <Data>(data: Data) => Promise<Data>;
 }
 
+export abstract class Instacable {
+  static createInstance: <Data>(data: Data) => Promise<Data>;
+}
+
 export default function model<TBase extends Constructor, DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(Base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) {
   type Table = DB[TableName];
   type IdColumn = Table[IdColumnName];
+
+  function createInstance<BaseClass extends Constructor>(Base: BaseClass, data: any) {
+    const instance = new Base();
+    Object.assign(instance, data);
+    return instance;
+  }
   
-  return class Model extends Base implements Updatable {
+  return class Model extends Base {
     static readonly db: Database<DB> = db;
     static readonly table: TableName = table;
     static readonly id: IdColumnName = id;
@@ -42,9 +52,17 @@ export default function model<TBase extends Constructor, DB, TableName extends k
       return class extends this {};
     }
 
+
+    static createInstance(data: any) {
+      return new this(data) as InstanceType<TBase>;
+    }
+    /*
+    
     static createInstance<Instance extends typeof Model>(this: Instance, data: any) {
       return new this(data) as InstanceType<Instance>;
     }
+    */
+  
 
     static transaction<Type>(callback: TransactionCallback<DB, Type>) {
       return this.db.transaction(callback);
@@ -78,8 +96,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
       return this.db.deleteFrom(this.table);
     }
 
-    static async find<Instance extends typeof Model, ColumnName extends keyof Table & string>(
-      this: Instance,
+    static async find<ColumnName extends keyof Table & string>(
       column: ColumnName,
       values: SelectType<Table[ColumnName]>[],
     ) {

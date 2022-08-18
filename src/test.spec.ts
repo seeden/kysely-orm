@@ -1,6 +1,5 @@
 import Database from './Database';
 import applyMixins from './utils/applyMixins';
-import applyMixins2 from './utils/applyMixins2';
 import updatedAt from './mixins/updatedAt';
 
 if (!process.env.DATASABE_URL) {
@@ -38,14 +37,19 @@ const test = new Test2({
   id: 1,
   email: 'dddd',
   updatedAt: '',
-});
 
+});
+//test.idddd;
 test.email;
 // test.ooo;
 
 
 
-class User extends updatedAt<DB, 'users', 'id'>('updatedAt')(db.model('users', 'id')) {
+class User extends applyMixins(
+  db, 'users', 'id',
+  db.model('users', 'id'),
+  updatedAt<DB, 'users', 'id'>('updatedAt'),
+ ) {
   static findByEmail(email: string) {
     return this.findOne('email', email);
   }
@@ -68,12 +72,13 @@ const user = new User({
   email: 'test@gmail.com',
   id: 234,
   updatedAt: 'test',
-  //additional: 234,
+  // additional: 234,
 });
 
 
 user.email;
 user.item;
+user.i;
 //user.ttttt;
 
 
@@ -111,10 +116,15 @@ describe('transactions', () => {
   it('should execute two transactions in parallel', async () => {
     const user1 = await User.getOneByFields({
       email: 'zfedor@gmail.com',
-    });
+    }) as User;
 
+    console.log('is instance', user1 instanceof User);
+
+    user1.email;
+/*
     expect(user1).toBeDefined();
     expect(user1.email).toBe('zfedor@gmail.com');
+    */
   });
 
   

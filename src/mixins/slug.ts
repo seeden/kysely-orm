@@ -77,7 +77,7 @@ function generate<DB, TableName extends keyof DB>(data: Data, options: Options<D
 }
 
 export default function slug<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(options: Options<DB, TableName>) {
-  return <TBase extends Constructor>(Base: Model<TBase, DB, any, any>) => {
+  return <TBase extends Constructor>(Base: Model<TBase, DB, TableName, IdColumnName>) => {
     type Table = DB[TableName];
     return class Slug extends Base {
       static async beforeInsert(data: Insertable<Table>) {

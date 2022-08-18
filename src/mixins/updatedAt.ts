@@ -2,9 +2,8 @@ import { sql, type Updateable, type InsertObject } from 'kysely';
 import model, { type Model, type Updatable } from './model';
 import Constructor from '../@types/Constructor';
 
-
 function updatedAt<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(field: keyof DB[TableName] & string) {
-  return <TBase extends Constructor>(Base: Model<TBase, DB, any, any>) => {
+  return <TBase extends Constructor>(Base: Model<TBase, DB, TableName, IdColumnName>) => {
     return class UpdatedAt extends Base  {
       static async beforeUpdate(data: Updateable<InsertObject<DB, TableName>>) {
   
