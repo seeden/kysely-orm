@@ -1,6 +1,9 @@
+
+import { NoResultError } from 'kysely';
 import Database from './Database';
 import applyMixins from './utils/applyMixins';
 import updatedAt from './mixins/updatedAt';
+import RelationType from './constants/RelationType';
 
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
@@ -12,50 +15,45 @@ interface Users {
   updatedAt: string;
 }
 
+interface Comments {
+  id: number;
+  updatedAt: string;
+  userId: number;
+}
+
 interface DB {
   users: Users;
   users2: {
     bla: string;
   };
+  comments: Comments;
 };
 
 const db = new Database<DB>({
   connectionString: process.env.DATASABE_URL,
 });
 
-class Test2 implements Users {
-  id!: number;
-  email!: string;
-  updatedAt!: string;
-
-  constructor(data: Users) {
-    Object.assign(this, data);
-  }
-}
-
-const test = new Test2({
-  id: 1,
-  email: 'dddd',
-  updatedAt: '',
-
-});
-//test.idddd;
-test.email;
-// test.ooo;
-
-
-
 class User extends applyMixins(
   db, 'users', 'id',
-  db.model('users', 'id'),
+  db.model('users', 'id', NoResultError),
   updatedAt<DB, 'users', 'id'>('updatedAt'),
  ) {
+  static relations = {
+    comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
+    comments2: this.relation(RelationType.HasManyRelation, 'users.id', 'comments.userId'),
+  };
+
   static findByEmail(email: string) {
     return this.findOne('email', email);
   }
 
   static updateByEmail(email: string, data: Partial<Users>) {
     return this.updateTable().where('email', '=', email).set(data).execute();
+  }
+
+  static testttt() {
+    return this.db.selectFrom('users').innerJoin('comments', 'users.id', 'comments.userId').execute();
+
   }
 
   get item() {
@@ -66,6 +64,7 @@ class User extends applyMixins(
     return 'ddd';
   }
 }
+
 
 
 const user = new User({
@@ -79,20 +78,57 @@ const user = new User({
 user.email;
 user.item;
 user.i;
-//user.ttttt;
+
 
 
 describe('transactions', () => {
   it('should execute transaction via db', async () => {
+    /*
     await db.transaction(async () => {
       const user = await User.findByEmail('zfedor@gmail.com');
       console.log('user 1', user);
+
+      
     });
+    */
+
+    const row = await User.getOne('email', 'zfedor@gmail.com');
+    console.log('row', row);
+/*
+    const comments = await User.relatedQuery([row], User.relations.comments).limit(2).execute();
+    console.log('last two comments', comments);
+
+    
+*/
+
+
+    const updatedRows = await User.findRelatedAndCombine([row], User.relations.comments2, 'comments2');
+    console.log('last two comments', updatedRows);
+
+    /*
+    comments[0].userId;
+    comments[0].id;
+
+    const comments2 = await User
+      .relatedQuery([row], User.relations.comments)
+      .where('users.id', '=', 7)
+      .execute();
+
+    */
 
     const user = await User.findByEmail('liviatlumacova@gmail.com');
     console.log('user 2', user);
-  });
 
+    //await User.fetchGraph([user], ['comments']);
+    // console.log('user with comments', user);
+/*
+    const [firstUser] = await User.findRelated([user], 'comments');
+    console.log('users comments', firstUser);
+    
+    firstUser.comments;
+    */
+  });
+/*
   it('should execute transaction via model', async () => {
     await User.transaction(async () => {
       const user = await User.findByEmail('zfedor@gmail.com');
@@ -121,10 +157,9 @@ describe('transactions', () => {
     console.log('is instance', user1 instanceof User);
 
     user1.email;
-/*
+
     expect(user1).toBeDefined();
     expect(user1.email).toBe('zfedor@gmail.com');
-    */
   });
 
   
@@ -139,4 +174,5 @@ describe('transactions', () => {
     const user = await User.findByEmail('liviatlumacova@gmail.com');
     console.log('user 2', user);
   });
+  */
 });

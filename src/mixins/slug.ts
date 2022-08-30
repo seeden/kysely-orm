@@ -90,14 +90,12 @@ export default function slug<DB, TableName extends keyof DB & string, IdColumnNa
       }
 
       static async findBySlug(value: string, column: keyof Table & string = options.field) {
-        const item = await this
+        return this
           .selectFrom()
           .selectAll()
           .where(this.db.dynamic.ref(column), '=', value)
           .limit(1)
           .executeTakeFirst();
-
-        return item && this.createInstance(item);
       }
 
       static async generateSlug(data: Insertable<Table>): Promise<string> {

@@ -1,8 +1,9 @@
-import { Kysely, PostgresDialect, CamelCasePlugin, type NoResultError } from 'kysely';
+import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError } from 'kysely';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import assign, { type Assign } from './mixins/assign';
-import model, { type Model } from './mixins/model';
+import Constructor from './@types/Constructor';
+import assign from './mixins/assign';
+import model from './mixins/model';
 
 export type DatabaseConfig<DB> = {
   isolated?: boolean;
@@ -30,7 +31,10 @@ export type TransactionCallback<DB, Type> = (trx: TransactionResponse<DB>) => Pr
 export default class Database<DB> {
   private kysely: Kysely<DB>;
   private asyncLocalDb = new AsyncLocalStorage<TransactionState<DB>>();
+  private models: { [table: string]: Constructor } = {};
   readonly isolated;
+
+  static readonly HasManyRelation = 1;
 
   constructor(config: DatabaseConfig<DB>) {
     this.isolated = config.isolated ?? false;
@@ -60,11 +64,29 @@ export default class Database<DB> {
 
   model<
     TableName extends keyof DB & string, 
-    IdColumnName extends keyof DB[TableName] & string
+    IdColumnName extends keyof DB[TableName] & string,
+    Relations,
   >(table: TableName, id: IdColumnName, error?: typeof NoResultError) {
+    if (table in this.models) {
+      throw new Error(`Model for table ${table} already exists`);
+    }
+
     type Table = DB[TableName];
-    const BaseClass = assign<Table>();
-    return model(BaseClass, this, table, id, error);
+    const DataClass = assign<Table>();
+    const ModelClass = model(DataClass, this, table, id, error);
+
+    this.models[table] = ModelClass;
+
+    return ModelClass;
+  }
+
+  createModelInstance<TableName extends keyof DB & string>(table: TableName, data: any) {
+    const ModelClass = this.models[table];
+    if (!ModelClass) {
+      throw new Error(`Model for table ${table} does not exist`);
+    }
+
+    return new ModelClass(data);
   }
 
   get dynamic() {

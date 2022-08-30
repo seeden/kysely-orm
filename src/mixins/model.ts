@@ -1,45 +1,77 @@
-import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError } from 'kysely';
+import {type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError } from 'kysely';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
 import type Constructor from '../@types/Constructor';
+import type ReferenceExpression from '../@types/ReferenceExpression';
+import { type OneRelation, type AnyRelation, type ManyRelation } from '../@types/Relation';
+import RelationType from '../constants/RelationType';
 
-export abstract class Updatable {
-  static beforeUpdate: <Data>(data: Data) => Promise<Data>;
-}
-
-export abstract class Instacable {
-  static createInstance: <Data>(data: Data) => Promise<Data>;
-}
-
-export default function model<TBase extends Constructor, DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(Base: TBase, db: Database<DB>, table: TableName, id: IdColumnName, NotFoundError: typeof NoResultError = NoResultError) {
+export default function model<
+  TBase extends Constructor, 
+  DB,
+  TableName extends keyof DB & string, 
+  IdColumnName extends keyof DB[TableName] & string,
+>(
+  Base: TBase, 
+  db: Database<DB>, 
+  table: TableName, 
+  id: IdColumnName, 
+  NotFoundError: typeof NoResultError = NoResultError,
+) {
   type Table = DB[TableName];
   type IdColumn = Table[IdColumnName];
-
-  function createInstance<BaseClass extends Constructor>(Base: BaseClass, data: any) {
-    const instance = new Base();
-    Object.assign(instance, data);
-    return instance;
-  }
+  type Data = Selectable<Table>;
   
   return class Model extends Base {
     static readonly db: Database<DB> = db;
     static readonly table: TableName = table;
     static readonly id: IdColumnName = id;
 
-    /*
-    get $id() {
-      return (<typeof Model>this.constructor).id;
+    static relation<
+      FromColumnName extends keyof DB[TableName] & string,
+      FromReferenceExpression extends ReferenceExpression<DB, TableName, FromColumnName>,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(
+      type: RelationType.BelongsToOneRelation | RelationType.HasOneRelation | RelationType.HasOneThroughRelation, 
+      from: FromReferenceExpression, 
+      to: ReferenceExpression<DB, ToTableName, ToColumnName>
+    ): OneRelation<
+      DB, 
+      TableName, 
+      FromColumnName, 
+      ToTableName,
+      ToColumnName
+    >;
+    static relation<
+      FromColumnName extends keyof DB[TableName] & string,
+      FromReferenceExpression extends ReferenceExpression<DB, TableName, FromColumnName>,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(
+      type: RelationType.BelongsToManyRelation | RelationType.HasManyRelation | RelationType.HasManyThroughRelation, 
+      from: FromReferenceExpression, 
+      to: ReferenceExpression<DB, ToTableName, ToColumnName>
+    ): ManyRelation<
+      DB, 
+      TableName, 
+      FromColumnName, 
+      ToTableName,
+      ToColumnName
+    >;
+    static relation<
+      FromColumnName extends keyof DB[TableName] & string,
+      FromReferenceExpression extends ReferenceExpression<DB, TableName, FromColumnName>,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(type: RelationType, from: FromReferenceExpression, to: ReferenceExpression<DB, ToTableName, ToColumnName>): any {
+      return {
+        type,
+        from,
+        to,
+      };
     }
-
-    get $table() {
-      return (<typeof Model>this.constructor).table;
-    }
-
-    get $db() {
-      return (<typeof Model>this.constructor).db;
-    }
-    */
-
+  
     static async beforeInsert(data: Insertable<Table>) {
       return data;
     }
@@ -51,18 +83,6 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     static isolate() {
       return class extends this {};
     }
-
-
-    static createInstance(data: any) {
-      return new this(data) as InstanceType<TBase>;
-    }
-    /*
-    
-    static createInstance<Instance extends typeof Model>(this: Instance, data: any) {
-      return new this(data) as InstanceType<Instance>;
-    }
-    */
-  
 
     static transaction<Type>(callback: TransactionCallback<DB, Type>) {
       return this.db.transaction(callback);
@@ -100,33 +120,29 @@ export default function model<TBase extends Constructor, DB, TableName extends k
       column: ColumnName,
       values: SelectType<Table[ColumnName]>[],
     ) {
-      const items = await this
+      return this
         .selectFrom()
         .where(this.ref(column as string), 'in', values)
         .selectAll()
         .execute();
-
-      return items?.map(item => this.createInstance(item));
     }
 
     static async findOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: SelectType<Table[ColumnName]>,
     ) {
-      const item = await this
+      return this
         .selectFrom()
         .where(this.ref(column as string), '=', value)
         .selectAll()
         .limit(1)
         .executeTakeFirst();
-
-      return item && this.createInstance(item);
     }
 
     static async findByFields(fields: Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
     }>) {
-      const items = await this
+      return this
         .selectFrom()
         .where((qb) => {
           let currentQuery = qb;
@@ -141,14 +157,12 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         })
         .selectAll()
         .execute();
-
-      return items?.map(item => this.createInstance(item));
     }
 
     static async findOneByFields(fields: Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
     }>, error: typeof NoResultError = NotFoundError) {
-      const item = await this
+      return this
         .selectFrom()
         .where((qb) => {
           let currentQuery = qb;
@@ -163,14 +177,12 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         })
         .selectAll()
         .executeTakeFirst();
-
-      return item && this.createInstance(item);
     }
 
     static async getOneByFields(fields: Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
     }>, error: typeof NoResultError = NotFoundError) {
-      const item = await this
+      return this
         .selectFrom()
         .where((qb) => {
           let currentQuery = qb;
@@ -185,8 +197,6 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         })
         .selectAll()
         .executeTakeFirstOrThrow(error);
-
-      return this.createInstance(item);
     }
 
     static findById(id: SelectType<IdColumn>) {
@@ -209,7 +219,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .limit(1)
         .executeTakeFirstOrThrow(error);
 
-      return this.createInstance(item);
+      return item;
     }
 
     static getById(id: SelectType<IdColumn>) {
@@ -223,14 +233,12 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     ) {
       const processedData = await this.beforeUpdate(data);
 
-      const item = await this
+      return this
         .updateTable()
         .where(this.ref(column as string), '=', value)
         .set(processedData)
         .returningAll()
         .executeTakeFirst();
-
-      return item && this.createInstance(item);
     }
 
     static async findByFieldsAndUpdate(
@@ -239,7 +247,7 @@ export default function model<TBase extends Constructor, DB, TableName extends k
       }>, 
       data: Updateable<InsertObject<DB, TableName>>
     ) {
-      const items = await this
+      return this
         .updateTable()
         .where((qb) => {
           let currentQuery = qb;
@@ -255,8 +263,6 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .set(data)
         .returningAll()
         .execute();
-
-      return items?.map(item => this.createInstance(item));
     }
 
     static async findOneByFieldsAndUpdate(
@@ -265,9 +271,8 @@ export default function model<TBase extends Constructor, DB, TableName extends k
       }>, 
       data: Updateable<InsertObject<DB, TableName>>
     ) {
-
       // TODO use with and select with limit 1
-      const item = await this
+      return this
         .updateTable()
         .where((qb) => {
           let currentQuery = qb;
@@ -283,8 +288,6 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .set(data)
         .returningAll()
         .executeTakeFirst();
-
-      return item && this.createInstance(item);
     }
 
     static async getOneByFieldsAndUpdate(
@@ -294,9 +297,8 @@ export default function model<TBase extends Constructor, DB, TableName extends k
       data: Updateable<InsertObject<DB, TableName>>,
       error: typeof NoResultError = NotFoundError,
     ) {
-
       // TODO use with and select with limit 1
-      const item = await this
+      return this
         .updateTable()
         .where((qb) => {
           let currentQuery = qb;
@@ -312,8 +314,6 @@ export default function model<TBase extends Constructor, DB, TableName extends k
         .set(data)
         .returningAll()
         .executeTakeFirstOrThrow(error);
-
-      return this.createInstance(item);
     }
 
     static findByIdAndUpdate(id: SelectType<IdColumn>, data: Updateable<InsertObject<DB, TableName>>) {
@@ -328,14 +328,12 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     ) {
       const processedData = await this.beforeUpdate(data);
 
-      const item = await this
+      return this
         .updateTable()
         .where(this.ref(column as string), '=', value)
         .set(processedData)
         .returningAll()
         .executeTakeFirstOrThrow(error);
-
-      return this.createInstance(item);
     }
 
     static getByIdAndUpdate(id: SelectType<IdColumn>, data: Updateable<InsertObject<DB, TableName>>) {
@@ -364,13 +362,11 @@ export default function model<TBase extends Constructor, DB, TableName extends k
     ) {
       const processedValues = await this.beforeInsert(values);
 
-      const item = await this
+      return this
         .insertInto()
         .values(processedValues)
         .returningAll()
         .executeTakeFirstOrThrow(error);
-
-      return this.createInstance(item);
     }
     
     static async deleteOne<ColumnName extends keyof Table & string>(
@@ -401,6 +397,105 @@ export default function model<TBase extends Constructor, DB, TableName extends k
 
     static deleteById(id: SelectType<IdColumn>) {
       return this.deleteOne(this.id, id);
+    }
+
+    static relatedQuery<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>) {
+      const { type, from, to } = relation;
+      const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
+      const [toTable, toColumn] = to.split('.') as [ToTableName, ToColumnName];
+
+      const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+
+      // @ts-ignore
+      const ids = models.map((model) => model[fromColumn]);
+
+      return this
+        .db
+        .selectFrom(fromTable)
+        // @ts-ignore
+        .innerJoin(toTable, to, from)
+        // @ts-ignore
+        .where(from, 'in', ids)
+        .selectAll(toTable);
+    }
+
+    static async findRelated<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>) {
+      const { type, from, to } = relation;
+      const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
+      const [toTable, toColumn] = to.split('.') as [ToTableName, ToColumnName];
+
+      // const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+
+      // @ts-ignore
+      const ids = models.map((model) => model[fromColumn]);
+
+      return this
+        .db
+        .selectFrom(fromTable)
+        // @ts-ignore
+        .innerJoin(toTable, to, from)
+        // @ts-ignore
+        .where(from, 'in', ids)
+        .selectAll(toTable)
+        .execute();
+    }
+
+    static async findRelatedAndCombine<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+      Field extends string,
+    >(models: Data[], relation: OneRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<Data & {
+      [key in Field]: Selectable<DB[ToTableName]>;
+    }[]>;
+    static async findRelatedAndCombine<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+      Field extends string,
+    >(models: Data[], relation: ManyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<Data & {
+      [key in Field]: Selectable<DB[ToTableName]>[];
+    }>;
+
+    static async findRelatedAndCombine<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+      Field extends string,
+    >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<any> {
+      const rows = await this.findRelated(models, relation);
+
+      const { type, from, to } = relation;
+      const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
+      const [toTable, toColumn] = to.split('.') as [ToTableName, ToColumnName];
+
+      const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+
+      // combine models and rows
+      return models.map((model) => {
+        // @ts-ignore
+        const id = model[fromColumn];
+        
+        const row = oneResult 
+          // @ts-ignore
+          ? rows.find((row) => row[toColumn] === id)
+          // @ts-ignore
+          : rows.filter((row) => row[toColumn] === id);
+        return { ...model, [field]: row };
+      });
     }
   }
 }
