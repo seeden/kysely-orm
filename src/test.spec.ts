@@ -80,17 +80,44 @@ user.item;
 user.i;
 
 
+async function wait(db: Database<DB>) {
+  return new Promise((resolve) => {
+    console.log('isTransaction inside wait', db.isTransaction);
+    setTimeout(() =>{
+      console.log('isTransaction inside wait setTimeout callback', db.isTransaction);
+      resolve(1);
+    }, 1000);
+  })
+}
+
+const dbPromise = new Promise<Database<DB>>((resolve) => {
+  console.log('isTransaction inside promise', db.isTransaction);
+  setTimeout(() =>{
+    console.log('isTransaction inside promise setTimeout callback', db.isTransaction);
+    resolve(db);
+  }, 1000);
+})
+
 
 describe('transactions', () => {
   it('should execute transaction via db', async () => {
-    /*
+    console.log('isTransaction before transaction', db.isTransaction);
     await db.transaction(async () => {
+      console.log('isTransaction before', db.isTransaction);
+      await wait(db);
+      console.log('isTransaction after wait', db.isTransaction);
       const user = await User.findByEmail('zfedor@gmail.com');
       console.log('user 1', user);
 
+      const dbFromPromise = await dbPromise;
+      console.log('isTransaction dbFromPromise after wait ', dbFromPromise.isTransaction);
+
       
     });
-    */
+
+    console.log('isTransaction after transaction ', db.isTransaction);
+
+    return;
 
     const row = await User.getOne('email', 'zfedor@gmail.com');
     console.log('row', row);

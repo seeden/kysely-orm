@@ -2,7 +2,7 @@ import { sql, type Insertable } from 'kysely';
 // @ts-ignore
 import getSlug from 'speakingurl';
 // @ts-ignore
-import Puid from 'puid';
+import * as Puid from 'puid';
 import { type Model } from './model';
 import type Constructor from '../@types/Constructor';
 
