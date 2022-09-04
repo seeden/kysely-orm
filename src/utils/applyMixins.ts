@@ -6,7 +6,7 @@ function applyMixins<
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
   TBase extends Constructor,
-  T1 extends Constructor,
+  T1,
 >(
   db: Database<DB>,
   table: TableName,
@@ -21,7 +21,7 @@ function applyMixins<
   IdColumnName extends keyof DB[TableName] & string, 
   TBase extends Constructor,
   T1 extends Constructor,
-  T2 extends Constructor,
+  T2,
 >(
   db: Database<DB>,
   table: TableName,
@@ -38,7 +38,7 @@ function applyMixins<
   TBase extends Constructor,
   T1 extends Constructor,
   T2 extends Constructor,
-  T3 extends Constructor,
+  T3,
 >(
   db: Database<DB>,
   table: TableName,
@@ -57,7 +57,7 @@ function applyMixins<
   T1 extends Constructor,
   T2 extends Constructor,
   T3 extends Constructor,
-  T4 extends Constructor,
+  T4,
 >(
   db: Database<DB>,
   table: TableName,
@@ -78,7 +78,7 @@ function applyMixins<
   T2 extends Constructor,
   T3 extends Constructor,
   T4 extends Constructor,
-  T5 extends Constructor,
+  T5,
 >(
   db: Database<DB>,
   table: TableName,
@@ -101,7 +101,7 @@ function applyMixins<
   T3 extends Constructor,
   T4 extends Constructor,
   T5 extends Constructor,
-  T6 extends Constructor,
+  T6,
 >(
   db: Database<DB>,
   table: TableName,
@@ -126,7 +126,7 @@ function applyMixins<
   T4 extends Constructor,
   T5 extends Constructor,
   T6 extends Constructor,
-  T7 extends Constructor,
+  T7,
 >(
   db: Database<DB>,
   table: TableName,
@@ -153,7 +153,7 @@ function applyMixins<
   T5 extends Constructor,
   T6 extends Constructor,
   T7 extends Constructor,
-  T8 extends Constructor,
+  T8,
 >(
   db: Database<DB>,
   table: TableName,
@@ -182,7 +182,7 @@ function applyMixins<
   T6 extends Constructor,
   T7 extends Constructor,
   T8 extends Constructor,
-  T9 extends Constructor,
+  T9,
 >(
   db: Database<DB>,
   table: TableName,
@@ -213,39 +213,7 @@ function applyMixins<
   T7 extends Constructor,
   T8 extends Constructor,
   T9 extends Constructor,
-  T10 extends Constructor,
->(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
-  base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
-  mixin4: (base: T3, db: Database<DB>, table: TableName, id: IdColumnName) => T4,
-  mixin5: (base: T4, db: Database<DB>, table: TableName, id: IdColumnName) => T5,
-  mixin6: (base: T5, db: Database<DB>, table: TableName, id: IdColumnName) => T6,
-  mixin7: (base: T6, db: Database<DB>, table: TableName, id: IdColumnName) => T7,
-  mixin8: (base: T7, db: Database<DB>, table: TableName, id: IdColumnName) => T8,
-  mixin9: (base: T8, db: Database<DB>, table: TableName, id: IdColumnName) => T9,
-  mixin10: (base: T9, db: Database<DB>, table: TableName, id: IdColumnName) => T10,
-): T10;
-
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
-  T3 extends Constructor,
-  T4 extends Constructor,
-  T5 extends Constructor,
-  T6 extends Constructor,
-  T7 extends Constructor,
-  T8 extends Constructor,
-  T9 extends Constructor,
-  T10 extends Constructor,
+  T10,
 >(
   db: Database<DB>,
   table: TableName,

@@ -1,5 +1,5 @@
 import { sql, type Updateable, type InsertObject } from 'kysely';
-import model, { type Model } from './model';
+import { type Model } from './model';
 import Constructor from '../@types/Constructor';
 
 function updatedAt<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(field: keyof DB[TableName] & string) {

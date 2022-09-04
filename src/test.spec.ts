@@ -3,6 +3,7 @@ import { NoResultError } from 'kysely';
 import Database from './Database';
 import applyMixins from './utils/applyMixins';
 import updatedAt from './mixins/updatedAt';
+import globalId from './mixins/globalId';
 import RelationType from './constants/RelationType';
 
 if (!process.env.DATASABE_URL) {
@@ -37,6 +38,7 @@ class User extends applyMixins(
   db, 'users', 'id',
   db.model('users', 'id', NoResultError),
   updatedAt<DB, 'users', 'id'>('updatedAt'),
+  globalId<DB, 'users', 'id'>(),
  ) {
   static relations = {
     comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
@@ -66,6 +68,7 @@ class User extends applyMixins(
 }
 
 
+User.findById('dddd');
 
 const user = new User({
   email: 'test@gmail.com',
