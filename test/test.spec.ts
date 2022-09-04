@@ -1,10 +1,10 @@
 
 import { NoResultError } from 'kysely';
-import Database from './Database';
-import applyMixins from './utils/applyMixins';
-import updatedAt from './mixins/updatedAt';
-import globalId from './mixins/globalId';
-import RelationType from './constants/RelationType';
+import Database from '../src/Database';
+import applyMixins from '../src/utils/applyMixins';
+import updatedAt from '../src/mixins/updatedAt';
+import globalId from '../src/mixins/globalId';
+import RelationType from '../src/constants/RelationType';
 
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
