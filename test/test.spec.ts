@@ -33,7 +33,79 @@ interface DB {
 const db = new Database<DB>({
   connectionString: process.env.DATASABE_URL,
 });
+/*
+class User extends globalId(updatedAt(db.model('users', 'id', NoResultError))('updatedAt'))() {
+  static relations = {
+    comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
+    comments2: this.relation(RelationType.HasManyRelation, 'users.id', 'comments.userId'),
+  };
 
+  static findByEmail(email: string) {
+    return this.findOne('email', email);
+  }
+
+  static updateByEmail(email: string, data: Partial<Users>) {
+    return this.updateTable().where('email', '=', email).set(data).execute();
+  }
+
+  static testttt() {
+    return this.db.selectFrom('users').innerJoin('comments', 'users.id', 'comments.userId').execute();
+
+  }
+
+  get item() {
+    return 1;
+  }
+
+  get i() {
+    return 'ddd';
+  }
+}
+*/
+
+class User extends applyMixins(
+  db.model('users', 'id', NoResultError),
+  (base) => updatedAt(base, 'updatedAt'),
+  (base) => globalId(base),
+) {
+  static relations = {
+    comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
+    comments2: this.relation(RelationType.HasManyRelation, 'users.id', 'comments.userId'),
+  };
+
+  static findByEmail(email: string) {
+    return this.findOne('email', email);
+  }
+
+  static updateByEmail(email: string, data: Partial<Users>) {
+    return this.updateTable().where('email', '=', email).set(data).execute();
+  }
+
+  static testttt() {
+    return this.db.selectFrom('users').innerJoin('comments', 'users.id', 'comments.userId').execute();
+
+  }
+
+  get item() {
+    return 1;
+  }
+
+  get i() {
+    return 'ddd';
+  }
+}
+
+const user2 = await User.getById('dddd');
+User.findByEmail(12);
+User.findByEmail('12');
+User.findByGlobalId(12);
+User.findByGlobalId('3333');
+
+user2.updatedAt;
+user2.updatedAt2;
+
+
+/*
 class User extends applyMixins(
   db, 'users', 'id',
   db.model('users', 'id', NoResultError),
@@ -66,9 +138,7 @@ class User extends applyMixins(
     return 'ddd';
   }
 }
-
-
-User.findById('dddd');
+*/
 
 const user = new User({
   email: 'test@gmail.com',

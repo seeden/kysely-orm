@@ -219,10 +219,9 @@ import { applyMixins, updatedAt, slug } from 'kysely-orm';
 import db from './db';
 
 class User extends applyMixins(
-  db, 'users', 'id', 
   db.model('users', 'id'),
-  updatedAt('updatedAt'),
-  slug({
+  (model) => updatedAt(model, 'updatedAt'),
+  (model) => slug(model, {
     field: 'username',
     sources: ['name', 'firstName', 'lastName'],
     slugOptions: {
@@ -245,9 +244,8 @@ import { applyMixins, updatedAt } from 'kysely-orm';
 import db from './db';
 
 export default class User extends applyMixins(
-  db, 'users', 'id', 
   db.model('users', 'id'),
-  updatedAt('updatedAt'),
+  (model) => updatedAt(model, 'updatedAt'),
 ) {
   findByEmail(email: string) {
     return this.findOne('email', email);
@@ -264,9 +262,8 @@ import { applyPlugins, slug } from 'kysely-orm';
 import type DB from './@types/DB';
 
 export default class User extends applyMixins(
-  db, 'users', 'id', 
   db.model('users', 'id'),
-  slug({
+  (model) => slug(model, {
     field: 'username',
     sources: ['name', 'firstName', 'lastName'],
     slugOptions: {

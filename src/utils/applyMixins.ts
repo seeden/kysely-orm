@@ -1,279 +1,161 @@
-import type Constructor from "../@types/Constructor";
-import type Database from "../Database";
+import { type Model } from '../mixins/model';
 
 function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
+  TBase extends Model<any, DB, TableName, IdColumnName>,
+>(
+  base: TBase,
+): TBase;
+
+function applyMixins<
+  DB, 
+  TableName extends keyof DB & string, 
+  IdColumnName extends keyof DB[TableName] & string,
+  TBase extends Model<any, DB, TableName, IdColumnName>,
   T1,
 >(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
   base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
+  applyMixin1: (base: TBase) => T1,
 ): T1;
 
 function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
+  TBase extends Model<any, DB, TableName, IdColumnName>,
+  T1,
   T2,
 >(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
   base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
+  applyMixin1: (base: TBase) => T1,
+  applyMixin2: (base: T1) => T2,
 ): T2;
 
 function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
+  TBase extends Model<any, DB, TableName, IdColumnName>,
+  T1,
+  T2,
   T3,
 >(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
   base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
+  applyMixin1: (base: TBase) => T1,
+  applyMixin2: (base: T1) => T2,
+  applyMixin3: (base: T2) => T3,
 ): T3;
 
 function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
-  T3 extends Constructor,
+  TBase extends Model<any, DB, TableName, IdColumnName>,
+  T1,
+  T2,
+  T3,
   T4,
 >(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
   base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
-  mixin4: (base: T3, db: Database<DB>, table: TableName, id: IdColumnName) => T4,
+  applyMixin1: (base: TBase) => T1,
+  applyMixin2: (base: T1) => T2,
+  applyMixin3: (base: T2) => T3,
+  applyMixin4: (base: T3) => T4,
 ): T4;
 
 function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
-  T3 extends Constructor,
-  T4 extends Constructor,
+  TBase extends Model<any, DB, TableName, IdColumnName>,
+  T1,
+  T2,
+  T3,
+  T4,
   T5,
 >(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
   base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
-  mixin4: (base: T3, db: Database<DB>, table: TableName, id: IdColumnName) => T4,
-  mixin5: (base: T4, db: Database<DB>, table: TableName, id: IdColumnName) => T5,
+  applyMixin1: (base: TBase) => T1,
+  applyMixin2: (base: T1) => T2,
+  applyMixin3: (base: T2) => T3,
+  applyMixin4: (base: T3) => T4,
+  applyMixin5: (base: T4) => T5,
 ): T5;
 
 function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
-  T3 extends Constructor,
-  T4 extends Constructor,
-  T5 extends Constructor,
-  T6,
+  TBase extends Model<any, DB, TableName, IdColumnName>,
+  T1,
+  T2,
+  T3,
+  T4,
+  T5,
+  T6
 >(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
   base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
-  mixin4: (base: T3, db: Database<DB>, table: TableName, id: IdColumnName) => T4,
-  mixin5: (base: T4, db: Database<DB>, table: TableName, id: IdColumnName) => T5,
-  mixin6: (base: T5, db: Database<DB>, table: TableName, id: IdColumnName) => T6,
+  applyMixin1: (base: TBase) => T1,
+  applyMixin2: (base: T1) => T2,
+  applyMixin3: (base: T2) => T3,
+  applyMixin4: (base: T3) => T4,
+  applyMixin5: (base: T4) => T5,
+  applyMixin6: (base: T5) => T6,
 ): T6;
 
 function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
-  T3 extends Constructor,
-  T4 extends Constructor,
-  T5 extends Constructor,
-  T6 extends Constructor,
-  T7,
+  TBase extends Model<any, DB, TableName, IdColumnName>,
+  T1,
+  T2,
+  T3,
+  T4,
+  T5,
+  T6,
 >(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
   base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
-  mixin4: (base: T3, db: Database<DB>, table: TableName, id: IdColumnName) => T4,
-  mixin5: (base: T4, db: Database<DB>, table: TableName, id: IdColumnName) => T5,
-  mixin6: (base: T5, db: Database<DB>, table: TableName, id: IdColumnName) => T6,
-  mixin7: (base: T6, db: Database<DB>, table: TableName, id: IdColumnName) => T7,
-): T7;
-
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
-  T3 extends Constructor,
-  T4 extends Constructor,
-  T5 extends Constructor,
-  T6 extends Constructor,
-  T7 extends Constructor,
-  T8,
->(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
-  base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
-  mixin4: (base: T3, db: Database<DB>, table: TableName, id: IdColumnName) => T4,
-  mixin5: (base: T4, db: Database<DB>, table: TableName, id: IdColumnName) => T5,
-  mixin6: (base: T5, db: Database<DB>, table: TableName, id: IdColumnName) => T6,
-  mixin7: (base: T6, db: Database<DB>, table: TableName, id: IdColumnName) => T7,
-  mixin8: (base: T7, db: Database<DB>, table: TableName, id: IdColumnName) => T8,
-): T8;
-
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
-  T3 extends Constructor,
-  T4 extends Constructor,
-  T5 extends Constructor,
-  T6 extends Constructor,
-  T7 extends Constructor,
-  T8 extends Constructor,
-  T9,
->(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
-  base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
-  mixin4: (base: T3, db: Database<DB>, table: TableName, id: IdColumnName) => T4,
-  mixin5: (base: T4, db: Database<DB>, table: TableName, id: IdColumnName) => T5,
-  mixin6: (base: T5, db: Database<DB>, table: TableName, id: IdColumnName) => T6,
-  mixin7: (base: T6, db: Database<DB>, table: TableName, id: IdColumnName) => T7,
-  mixin8: (base: T7, db: Database<DB>, table: TableName, id: IdColumnName) => T8,
-  mixin9: (base: T8, db: Database<DB>, table: TableName, id: IdColumnName) => T9,
-): T9;
-
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor,
-  T1 extends Constructor,
-  T2 extends Constructor,
-  T3 extends Constructor,
-  T4 extends Constructor,
-  T5 extends Constructor,
-  T6 extends Constructor,
-  T7 extends Constructor,
-  T8 extends Constructor,
-  T9 extends Constructor,
-  T10,
->(
-  db: Database<DB>,
-  table: TableName,
-  id: IdColumnName,
-  base: TBase,
-  mixin1: (base: TBase, db: Database<DB>, table: TableName, id: IdColumnName) => T1,
-  mixin2?: (base: T1, db: Database<DB>, table: TableName, id: IdColumnName) => T2,
-  mixin3?: (base: T2, db: Database<DB>, table: TableName, id: IdColumnName) => T3,
-  mixin4?: (base: T3, db: Database<DB>, table: TableName, id: IdColumnName) => T4,
-  mixin5?: (base: T4, db: Database<DB>, table: TableName, id: IdColumnName) => T5,
-  mixin6?: (base: T5, db: Database<DB>, table: TableName, id: IdColumnName) => T6,
-  mixin7?: (base: T6, db: Database<DB>, table: TableName, id: IdColumnName) => T7,
-  mixin8?: (base: T7, db: Database<DB>, table: TableName, id: IdColumnName) => T8,
-  mixin9?: (base: T8, db: Database<DB>, table: TableName, id: IdColumnName) => T9,
-  mixin10?: (base: T9, db: Database<DB>, table: TableName, id: IdColumnName) => T10,
+  applyMixin1?: (base: TBase) => T1,
+  applyMixin2?: (base: T1) => T2,
+  applyMixin3?: (base: T2) => T3,
+  applyMixin4?: (base: T3) => T4,
+  applyMixin5?: (base: T4) => T5,
+  applyMixin6?: (base: T5) => T6,
 ) {
-  const Mixin1Class = mixin1(base, db, table, id);
-  if (!mixin2) {
-    return Mixin1Class;
+  if (!applyMixin1) {
+    return base;
   }
 
-  const Mixin2Class = mixin2(Mixin1Class, db, table, id);
-  if (!mixin3) {
-    return Mixin2Class;
+  const mixin1Class = applyMixin1(base);
+  if (!applyMixin2) {
+    return mixin1Class;
   }
 
-  const Mixin3Class = mixin3(Mixin2Class, db, table, id);
-  if (!mixin4) {
-    return Mixin3Class;
+  const mixin2Class = applyMixin2(mixin1Class);
+  if (!applyMixin3) {
+    return mixin2Class;
   }
 
-  const Mixin4Class = mixin4(Mixin3Class, db, table, id);
-  if (!mixin5) {
-    return Mixin4Class;
+  const mixin3Class = applyMixin3(mixin2Class);
+  if (!applyMixin4) {
+    return mixin3Class;
   }
 
-  const Mixin5Class = mixin5(Mixin4Class, db, table, id);
-  if (!mixin6) {
-    return Mixin5Class;
+  const mixin4Class = applyMixin4(mixin3Class);
+  if (!applyMixin5) {
+    return mixin4Class;
   }
 
-  const Mixin6Class = mixin6(Mixin5Class, db, table, id);
-  if (!mixin7) {
-    return Mixin6Class;
+  const mixin5Class = applyMixin5(mixin4Class);
+  if (!applyMixin6) {
+    return mixin5Class;
   }
 
-  const Mixin7Class = mixin7(Mixin6Class, db, table, id);
-  if (!mixin8) {
-    return Mixin7Class;
-  }
-
-  const Mixin8Class = mixin8(Mixin7Class, db, table, id);
-  if (!mixin9) {
-    return Mixin8Class;
-  }
-
-  const Mixin9Class = mixin9(Mixin8Class, db, table, id);
-  if (!mixin10) {
-    return Mixin9Class;
-  }
+  const Mixin6Class = applyMixin6(mixin5Class);
+  return Mixin6Class;
 }
 
 export default applyMixins;

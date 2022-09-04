@@ -30,46 +30,44 @@ function fromGlobalId<IdType>(globalId: string): {
   };
 }
 
-export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>() {
-  return <TBase extends Constructor>(Base: Model<TBase, DB, TableName, IdColumnName>) => {
-    type Table = DB[TableName];
-    type IdColumn = SelectType<Table[IdColumnName]>;
-    
-    return class GlobalId extends Base {
-      static getGlobalId(data: Table): string {
-        const value = data[this.id];
-        if (typeof value === 'string' || typeof value === 'number') {
-          return base64([this.table, value.toString()].join(':'));
-        }
-        
-        throw new Error('Id is not defined');
-      }
+export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Constructor>(Base: Model<TBase, DB, TableName, IdColumnName>) {
+  type Table = DB[TableName];
+  type IdColumn = SelectType<Table[IdColumnName]>;
   
-      static getLocalId(globalId: string) {
-        const { type, id } = fromGlobalId(globalId);
-  
-        if (this.table !== type) {
-          throw new Error(`Model ${this.table} is not model ${type}`);
-        }
-  
-        return id;
+  return class GlobalId extends Base {
+    static getGlobalId(data: Table): string {
+      const value = data[this.id];
+      if (typeof value === 'string' || typeof value === 'number') {
+        return base64([this.table, value.toString()].join(':'));
       }
-
-      static findByGlobalId(globalId: string) {
-        const id = this.getLocalId(globalId) as IdColumn;
-        return this.findById(id);
-      }
-
-      static getByGlobalId(globalId: string) {
-        const id = this.getLocalId(globalId) as IdColumn;
-        return this.getById(id);
-      }
-
-      static findByGlobalIds(globalIds: string[]) {
-        const ids = globalIds.map((globalId) => this.getLocalId(globalId) as IdColumn);
-        return this.findByIds(ids);
-      }
+      
+      throw new Error('Id is not defined');
     }
-  };
+
+    static getLocalId(globalId: string) {
+      const { type, id } = fromGlobalId(globalId);
+
+      if (this.table !== type) {
+        throw new Error(`Model ${this.table} is not model ${type}`);
+      }
+
+      return id;
+    }
+
+    static findByGlobalId(globalId: string) {
+      const id = this.getLocalId(globalId) as IdColumn;
+      return this.findById(id);
+    }
+
+    static getByGlobalId(globalId: string) {
+      const id = this.getLocalId(globalId) as IdColumn;
+      return this.getById(id);
+    }
+
+    static findByGlobalIds(globalIds: string[]) {
+      const ids = globalIds.map((globalId) => this.getLocalId(globalId) as IdColumn);
+      return this.findByIds(ids);
+    }
+  }
 }
 

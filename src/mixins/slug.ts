@@ -76,63 +76,64 @@ function generate<DB, TableName extends keyof DB>(data: Data, options: Options<D
   return slug;
 }
 
-export default function slug<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(options: Options<DB, TableName>) {
-  return <TBase extends Constructor>(Base: Model<TBase, DB, TableName, IdColumnName>) => {
-    type Table = DB[TableName];
-    return class Slug extends Base {
-      static async beforeInsert(data: Insertable<Table>) {
-        const { field } = options;
+export default function slug<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Constructor>(
+  Base: Model<TBase, DB, TableName, IdColumnName>,
+  options: Options<DB, TableName>,
+) {
+  type Table = DB[TableName];
+  return class Slug extends Base {
+    static async beforeInsert(data: Insertable<Table>) {
+      const { field } = options;
 
-        return {
-          ...await Base.beforeInsert(data),
-          [field]: await this.generateSlug(data),
-        };
+      return {
+        ...await Base.beforeInsert(data),
+        [field]: await this.generateSlug(data),
+      };
+    }
+
+    static async findBySlug(value: string, column: keyof Table & string = options.field) {
+      return this
+        .selectFrom()
+        .selectAll()
+        .where(this.db.dynamic.ref(column), '=', value)
+        .limit(1)
+        .executeTakeFirst();
+    }
+
+    static async generateSlug(data: Insertable<Table>): Promise<string> {
+      const { field } = options;
+    
+      // generate slug
+      const slug = generate(data, options) ?? puid.generate();
+    
+      // check if slug is already taken
+      const rowWithSlug = await this.findBySlug(slug, field);
+      if (!rowWithSlug) {
+        return slug;
       }
+    
+      const { ref } = this.db.dynamic;
 
-      static async findBySlug(value: string, column: keyof Table & string = options.field) {
-        return this
-          .selectFrom()
-          .selectAll()
-          .where(this.db.dynamic.ref(column), '=', value)
-          .limit(1)
-          .executeTakeFirst();
+      // TODO add lock by bigint (hashed slug)
+    
+      // generate new slug
+      const firstRow = await this
+        .selectFrom()
+        .where(ref(field), '~', `^${slug}[0-9]*$`)
+        .orderBy(sql`length(${sql.ref(field)})`, 'desc')
+        .orderBy(ref(field), 'desc')
+        .select(ref(field))
+        .limit(1)
+        .executeTakeFirst();
+    
+      if (firstRow) {
+        const lastSlug = firstRow[field] as unknown as string;
+        const number = lastSlug?.substr(slug.length);
+        const nextNumber = number ? Number(number) + 1 : 2;
+        return `${slug}${nextNumber}`;
       }
-
-      static async generateSlug(data: Insertable<Table>): Promise<string> {
-        const { field } = options;
-      
-        // generate slug
-        const slug = generate(data, options) ?? puid.generate();
-      
-        // check if slug is already taken
-        const rowWithSlug = await this.findBySlug(slug, field);
-        if (!rowWithSlug) {
-          return slug;
-        }
-      
-        const { ref } = this.db.dynamic;
-
-        // TODO add lock by bigint (hashed slug)
-      
-        // generate new slug
-        const firstRow = await this
-          .selectFrom()
-          .where(ref(field), '~', `^${slug}[0-9]*$`)
-          .orderBy(sql`length(${sql.ref(field)})`, 'desc')
-          .orderBy(ref(field), 'desc')
-          .select(ref(field))
-          .limit(1)
-          .executeTakeFirst();
-      
-        if (firstRow) {
-          const lastSlug = firstRow[field] as unknown as string;
-          const number = lastSlug?.substr(slug.length);
-          const nextNumber = number ? Number(number) + 1 : 2;
-          return `${slug}${nextNumber}`;
-        }
-      
-        return `${slug}2`;
-      }
-    }   
-  };
+    
+      return `${slug}2`;
+    }
+  }
 }
