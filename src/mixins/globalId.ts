@@ -1,6 +1,5 @@
 import { type SelectType } from 'kysely';
 import { type Model } from './model';
-import Constructor from '../@types/Constructor';
 
 function base64(i: string): string {
   return Buffer.from(i, 'utf8').toString('base64');
@@ -30,7 +29,7 @@ function fromGlobalId(globalId: string): {
   };
 }
 
-export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Constructor>(Base: Model<TBase, DB, TableName, IdColumnName>) {
+export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(Base: Model<DB, TableName, IdColumnName>) {
   type Table = DB[TableName];
   type IdColumn = SelectType<Table[IdColumnName]>;
   

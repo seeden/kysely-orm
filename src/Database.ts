@@ -71,8 +71,7 @@ export default class Database<DB> {
     }
 
     type Table = DB[TableName];
-    const DataClass = assign<Table>();
-    const ModelClass = model(DataClass, this, table, id, error);
+    const ModelClass = model(this, table, id, error);
 
     this.models[table] = ModelClass;
 

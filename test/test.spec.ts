@@ -1,11 +1,5 @@
 
-import { NoResultError } from 'kysely';
-import Database from '../src/Database';
-import applyMixins from '../src/utils/applyMixins';
-import updatedAt from '../src/mixins/updatedAt';
-import globalId from '../src/mixins/globalId';
-import RelationType from '../src/constants/RelationType';
-
+import { Database, model, RelationType, NoResultError, applyMixins, updatedAt, globalId } from '../dist/esm';
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
 }
@@ -63,8 +57,11 @@ class User extends globalId(updatedAt(db.model('users', 'id', NoResultError))('u
 }
 */
 
+
+const Model = model(db, 'users', 'id', NoResultError);
+
 class User extends applyMixins(
-  db.model('users', 'id', NoResultError),
+  Model,
   (base) => updatedAt(base, 'updatedAt'),
   (base) => globalId(base),
   (base) => globalId(base),

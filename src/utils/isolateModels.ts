@@ -1,6 +1,6 @@
 import { type Model } from '../mixins/model';
 
-export default function isolateModels<Models extends Record<string, Model<any, any, any, any>>>(models: Models): Models {
+export default function isolateModels<Models extends Record<string, Model<any, any, any>>>(models: Models): Models {
   const isolatedModels: Models = {
     ...models,
   };

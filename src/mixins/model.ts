@@ -1,18 +1,15 @@
 import {type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError } from 'kysely';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
-import type Constructor from '../@types/Constructor';
 import type ReferenceExpression from '../@types/ReferenceExpression';
 import { type OneRelation, type AnyRelation, type ManyRelation } from '../@types/Relation';
 import RelationType from '../constants/RelationType';
 
 export default function model<
-  TBase extends Constructor, 
   DB,
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string,
 >(
-  Base: TBase, 
   db: Database<DB>, 
   table: TableName, 
   id: IdColumnName, 
@@ -22,7 +19,7 @@ export default function model<
   type IdColumn = Table[IdColumnName];
   type Data = Selectable<Table>;
   
-  return class Model extends Base {
+  return class Model {
     static readonly db: Database<DB> = db;
     static readonly table: TableName = table;
     static readonly id: IdColumnName = id;
@@ -500,4 +497,4 @@ export default function model<
   }
 }
 
-export type Model<TBase extends Constructor, DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string> = ReturnType<typeof model<TBase, DB, TableName, IdColumnName>>;
+export type Model<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string> = ReturnType<typeof model<DB, TableName, IdColumnName>>;

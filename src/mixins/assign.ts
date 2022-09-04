@@ -6,7 +6,7 @@ export default function assign<Table>() {
       Object.assign(this, data);
     }
   } as {
-    new (arg: Selectable<Table>): Selectable<Table>;
+    new (data: Selectable<Table>): Selectable<Table>;
   };
 }
 

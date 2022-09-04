@@ -4,7 +4,6 @@ import getSlug from 'speakingurl';
 // @ts-ignore
 import * as Puid from 'puid';
 import { type Model } from './model';
-import type Constructor from '../@types/Constructor';
 
 const puid = new Puid(true);
 
@@ -76,8 +75,8 @@ function generate<DB, TableName extends keyof DB>(data: Data, options: Options<D
   return slug;
 }
 
-export default function slug<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Constructor>(
-  Base: Model<TBase, DB, TableName, IdColumnName>,
+export default function slug<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(
+  Base: Model<DB, TableName, IdColumnName>,
   options: Options<DB, TableName>,
 ) {
   type Table = DB[TableName];
