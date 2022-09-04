@@ -10,7 +10,7 @@ function unbase64(i: string): string {
   return Buffer.from(i, 'base64').toString('utf8');
 }
 
-function fromGlobalId<IdType>(globalId: string): {
+function fromGlobalId(globalId: string): {
   type: string;
   id: string;
 } {

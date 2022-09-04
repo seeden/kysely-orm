@@ -161,7 +161,7 @@ export default function model<
 
     static async findOneByFields(fields: Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
-    }>, error: typeof NoResultError = NotFoundError) {
+    }>) {
       return this
         .selectFrom()
         .where((qb) => {
@@ -405,11 +405,11 @@ export default function model<
       ToTableName extends keyof DB & string,
       ToColumnName extends keyof DB[ToTableName] & string,
     >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>) {
-      const { type, from, to } = relation;
+      const { from, to } = relation;
       const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
-      const [toTable, toColumn] = to.split('.') as [ToTableName, ToColumnName];
+      const [toTable] = to.split('.') as [ToTableName, ToColumnName];
 
-      const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+      // const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
 
       // @ts-ignore
       const ids = models.map((model) => model[fromColumn]);
@@ -430,9 +430,9 @@ export default function model<
       ToTableName extends keyof DB & string,
       ToColumnName extends keyof DB[ToTableName] & string,
     >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>) {
-      const { type, from, to } = relation;
+      const { from, to } = relation;
       const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
-      const [toTable, toColumn] = to.split('.') as [ToTableName, ToColumnName];
+      const [toTable] = to.split('.') as [ToTableName, ToColumnName];
 
       // const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
 
@@ -479,8 +479,8 @@ export default function model<
       const rows = await this.findRelated(models, relation);
 
       const { type, from, to } = relation;
-      const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
-      const [toTable, toColumn] = to.split('.') as [ToTableName, ToColumnName];
+      const [_fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
+      const [_toTable, toColumn] = to.split('.') as [ToTableName, ToColumnName];
 
       const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
 

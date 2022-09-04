@@ -67,6 +67,10 @@ class User extends applyMixins(
   db.model('users', 'id', NoResultError),
   (base) => updatedAt(base, 'updatedAt'),
   (base) => globalId(base),
+  (base) => globalId(base),
+  (base) => globalId(base),
+  (base) => globalId(base),
+  (base) => globalId(base),
 ) {
   static relations = {
     comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),

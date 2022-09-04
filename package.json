@@ -9,6 +9,7 @@
   "engines": {
     "node": ">=16.2.0"
   },
+  "types": "dist/index.d.ts",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "exports": {
@@ -24,7 +25,8 @@
     "build:esm": "tsc -p tsconfig.json",
     "build:cjs": "tsc -p tsconfig-cjs.json",
     "test": "jest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "valid": "tsc --noEmit"
   },
   "author": "Zlatko Fedor <kysely-orm@zlatkofedor.com>",
   "license": "MIT",

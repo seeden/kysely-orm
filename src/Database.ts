@@ -65,7 +65,6 @@ export default class Database<DB> {
   model<
     TableName extends keyof DB & string, 
     IdColumnName extends keyof DB[TableName] & string,
-    Relations,
   >(table: TableName, id: IdColumnName, error?: typeof NoResultError) {
     if (table in this.models) {
       throw new Error(`Model for table ${table} already exists`);
