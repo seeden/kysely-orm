@@ -1,5 +1,6 @@
 
-import { Database, model, RelationType, NoResultError, applyMixins, updatedAt, globalId } from '../dist/esm';
+import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId } from '../dist/esm';
+
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
 }
@@ -58,15 +59,15 @@ class User extends globalId(updatedAt(db.model('users', 'id', NoResultError))('u
 */
 
 
-const Model = model(db, 'users', 'id', NoResultError);
+const Model = db.model('users', 'id', NoResultError);
+
+const MixedModel = applyMixins(Model);
+
+console.log('MixedModel', MixedModel);
 
 class User extends applyMixins(
   Model,
   (base) => updatedAt(base, 'updatedAt'),
-  (base) => globalId(base),
-  (base) => globalId(base),
-  (base) => globalId(base),
-  (base) => globalId(base),
   (base) => globalId(base),
 ) {
   static relations = {

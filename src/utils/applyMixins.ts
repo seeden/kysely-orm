@@ -1,10 +1,11 @@
-import { type Model } from '../mixins/model';
+import { Selectable } from 'kysely';
+import Constructor from '../@types/Constructor';
 
 function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Model<DB, TableName, IdColumnName>,
+  TBase extends Constructor<Selectable<DB[TableName]>>,
 >(
   base: TBase,
 ): TBase;
@@ -13,7 +14,7 @@ function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string,
-  TBase extends Model<DB, TableName, IdColumnName>,
+  TBase extends Constructor<Selectable<DB[TableName]>>,
   T1,
 >(
   base: TBase,
@@ -24,7 +25,7 @@ function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Model<DB, TableName, IdColumnName>,
+  TBase extends Constructor<Selectable<DB[TableName]>>,
   T1,
   T2,
 >(
@@ -37,7 +38,7 @@ function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Model<DB, TableName, IdColumnName>,
+  TBase extends Constructor<Selectable<DB[TableName]>>,
   T1,
   T2,
   T3,
@@ -52,7 +53,7 @@ function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Model<DB, TableName, IdColumnName>,
+  TBase extends Constructor<Selectable<DB[TableName]>>,
   T1,
   T2,
   T3,
@@ -69,7 +70,7 @@ function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Model<DB, TableName, IdColumnName>,
+  TBase extends Constructor<Selectable<DB[TableName]>>,
   T1,
   T2,
   T3,
@@ -88,7 +89,7 @@ function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Model<DB, TableName, IdColumnName>,
+  TBase extends Constructor<Selectable<DB[TableName]>>,
   T1,
   T2,
   T3,
@@ -109,7 +110,7 @@ function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Model<DB, TableName, IdColumnName>,
+  TBase extends Constructor<Selectable<DB[TableName]>>,
   T1,
   T2,
   T3,
