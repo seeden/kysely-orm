@@ -70,6 +70,7 @@ class User extends applyMixins(
   (base) => updatedAt(base, 'updatedAt'),
   (base) => globalId(base),
 ) {
+
   static relations = {
     comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
     comments2: this.relation(RelationType.HasManyRelation, 'users.id', 'comments.userId'),

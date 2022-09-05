@@ -18,13 +18,13 @@ export default function model<
   type Table = DB[TableName];
   type IdColumn = Table[IdColumnName];
   type Data = Selectable<Table>;
-
-  return class MainModel {
+  return class Model {
     static readonly db: Database<DB> = db;
     static readonly table: TableName = table;
     static readonly id: IdColumnName = id;
+    static readonly notFoundError: typeof NoResultError = NotFoundError;
 
-    constructor(data: Selectable<Table>) {
+    constructor(data: Data) {
       Object.assign(this, data);
     }
 

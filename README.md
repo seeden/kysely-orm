@@ -77,7 +77,7 @@ import { User, Book } from '../models';
 
 async function createUser(data) {
   const newUser = User.transaction(async () => {
-    const user = await User.findByEmail(email); // user instanceof User; === true
+    const user = await User.findByEmail(email);
     if (user) {
       throw new Error('User already exists');
     }
@@ -277,32 +277,108 @@ export default class User extends applyMixins(
 }
 ```
 
+# Use model as correct selectable type
+
+Until TypeScript fix https://github.com/microsoft/TypeScript/issues/40451 there is a simple option how to use model as correct type. Interface named same as type in file will merge all attributes automatically.
+
+```ts
+import { type Selectable, Database } from 'kysely-orm';
+
+interface Users {
+  id: Generated<number>;
+  name: string;
+}
+
+interface DB {
+  users: Users;
+};
+
+const db = new Database<DB>({
+  connectionString: '...',
+});
+
+export default interface User extends Selectable<Users> {};
+export default class User extends db.model('users', 'id') {
+
+}
+```
+
+```ts
+import User from './User';
+
+const user = new User({
+  id: 1,
+  name: 'Adam',
+});
+
+console.log(user.name); // name has correct type string
+```
+
+Without interface, user.name will throw error about unknown property.
+
 # Standard Model methods and properties
 
 ```ts
 class Model {
-  static db = db;
-  static table = table;
-  static id = id;
+  static readonly db: Database<DB> = db;
+  static readonly table: TableName = table;
+  static readonly id: IdColumnName = id;
 
-  get $id() {
-    return (<typeof Model>this.constructor).id;
+  constructor(data: Data) {
+    Object.assign(this, data);
   }
 
-  get $table() {
-    return (<typeof Model>this.constructor).table;
+  static relation<
+    FromColumnName extends keyof DB[TableName] & string,
+    FromReferenceExpression extends ReferenceExpression<DB, TableName, FromColumnName>,
+    ToTableName extends keyof DB & string,
+    ToColumnName extends keyof DB[ToTableName] & string,
+  >(
+    type: RelationType.BelongsToOneRelation | RelationType.HasOneRelation | RelationType.HasOneThroughRelation, 
+    from: FromReferenceExpression, 
+    to: ReferenceExpression<DB, ToTableName, ToColumnName>
+  ): OneRelation<
+    DB, 
+    TableName, 
+    FromColumnName, 
+    ToTableName,
+    ToColumnName
+  >;
+  static relation<
+    FromColumnName extends keyof DB[TableName] & string,
+    FromReferenceExpression extends ReferenceExpression<DB, TableName, FromColumnName>,
+    ToTableName extends keyof DB & string,
+    ToColumnName extends keyof DB[ToTableName] & string,
+  >(
+    type: RelationType.BelongsToManyRelation | RelationType.HasManyRelation | RelationType.HasManyThroughRelation, 
+    from: FromReferenceExpression, 
+    to: ReferenceExpression<DB, ToTableName, ToColumnName>
+  ): ManyRelation<
+    DB, 
+    TableName, 
+    FromColumnName, 
+    ToTableName,
+    ToColumnName
+  >;
+  static relation<
+    FromColumnName extends keyof DB[TableName] & string,
+    FromReferenceExpression extends ReferenceExpression<DB, TableName, FromColumnName>,
+    ToTableName extends keyof DB & string,
+    ToColumnName extends keyof DB[ToTableName] & string,
+  >(type: RelationType, from: FromReferenceExpression, to: ReferenceExpression<DB, ToTableName, ToColumnName>): any {
+    return {
+      type,
+      from,
+      to,
+    };
   }
 
-  get $db() {
-    return (<typeof Model>this.constructor).db;
+  static async beforeInsert(data: Insertable<Table>) {
+    return data;
   }
 
-  static create<Instance extends typeof Model, Data>(this: Instance, data: Data) {
-    return new this(data) as InstanceType<Instance>;
-  }
-
-  test<Type>(callback: TransactionCallback<DB, Type>) {
-    return db.transaction(callback);
+  static async beforeUpdate(data: Updateable<InsertObject<DB, TableName>>) {
+    return data;
   }
 
   static isolate() {
@@ -341,46 +417,101 @@ class Model {
     return this.db.deleteFrom(this.table);
   }
 
-  static async find<Instance extends typeof Model, ColumnName extends keyof DB[TableName] & string>(
-    this: Instance,
+  static async find<ColumnName extends keyof Table & string>(
     column: ColumnName,
-    values: SelectType<DB[TableName][ColumnName]>[],
+    values: SelectType<Table[ColumnName]>[],
   ) {
-    const items = await this
+    return this
       .selectFrom()
       .where(this.ref(column as string), 'in', values)
       .selectAll()
       .execute();
-
-    return items?.map(item => new this(item) as InstanceType<Instance>);
   }
 
-  static async findOne<ColumnName extends keyof DB[TableName] & string>(
+  static async findOne<ColumnName extends keyof Table & string>(
     column: ColumnName,
-    value: SelectType<DB[TableName][ColumnName]>,
+    value: SelectType<Table[ColumnName]>,
   ) {
-    const item = await this
+    return this
       .selectFrom()
       .where(this.ref(column as string), '=', value)
       .selectAll()
       .limit(1)
       .executeTakeFirst();
-
-    return item && this.create(item);
   }
 
-  static findById(id: SelectType<DB[TableName][IdColumnName]>) {
+  static async findByFields(fields: Partial<{
+    [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
+  }>) {
+    return this
+      .selectFrom()
+      .where((qb) => {
+        let currentQuery = qb;
+        for (const [column, value] of Object.entries(fields)) {
+          if (Array.isArray(value)) {
+            currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+          } else {
+            currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+          }
+        }
+        return currentQuery;
+      })
+      .selectAll()
+      .execute();
+  }
+
+  static async findOneByFields(fields: Partial<{
+    [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
+  }>) {
+    return this
+      .selectFrom()
+      .where((qb) => {
+        let currentQuery = qb;
+        for (const [column, value] of Object.entries(fields)) {
+          if (Array.isArray(value)) {
+            currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+          } else {
+            currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+          }
+        }
+        return currentQuery;
+      })
+      .selectAll()
+      .executeTakeFirst();
+  }
+
+  static async getOneByFields(fields: Partial<{
+    [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
+  }>, error: typeof NoResultError = NotFoundError) {
+    return this
+      .selectFrom()
+      .where((qb) => {
+        let currentQuery = qb;
+        for (const [column, value] of Object.entries(fields)) {
+          if (Array.isArray(value)) {
+            currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+          } else {
+            currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+          }
+        }
+        return currentQuery;
+      })
+      .selectAll()
+      .executeTakeFirstOrThrow(error);
+  }
+
+  static findById(id: SelectType<IdColumn>) {
     return this.findOne(this.id, id);
   }
 
-  static findByIds(ids: SelectType<DB[TableName][IdColumnName]>[]) {
+  static findByIds(ids: SelectType<IdColumn>[]) {
     return this.find(this.id, ids);
   }
 
-  static async getOne<ColumnName extends keyof DB[TableName] & string>(
+  static async getOne<ColumnName extends keyof Table & string>(
     column: ColumnName,
-    value: SelectType<DB[TableName][ColumnName]>,
-    error: typeof NoResultError = NoResultError,
+    value: SelectType<Table[ColumnName]>,
+    error: typeof NoResultError = NotFoundError,
   ) {
     const item = await this
       .selectFrom()
@@ -389,59 +520,130 @@ class Model {
       .limit(1)
       .executeTakeFirstOrThrow(error);
 
-    return this.create(item);
+    return item;
   }
 
-  static getById(id: SelectType<DB[TableName][IdColumnName]>) {
+  static getById(id: SelectType<IdColumn>) {
     return this.getOne(this.id, id);
   }
   
-  static async findOneAndUpdate<ColumnName extends keyof DB[TableName] & string>(
+  static async findOneAndUpdate<ColumnName extends keyof Table & string>(
     column: ColumnName,
-    value: SelectType<DB[TableName][ColumnName]>,
+    value: SelectType<Table[ColumnName]>,
     data: Updateable<InsertObject<DB, TableName>>,
   ) {
     const processedData = await this.beforeUpdate(data);
 
-    const item = await this
+    return this
       .updateTable()
       .where(this.ref(column as string), '=', value)
       .set(processedData)
       .returningAll()
       .executeTakeFirst();
-
-    return item && this.create(item);
   }
 
-  static findByIdAndUpdate(id: SelectType<DB[TableName][IdColumnName]>, data: Updateable<InsertObject<DB, TableName>>) {
+  static async findByFieldsAndUpdate(
+    fields: Partial<{
+      [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
+    }>, 
+    data: Updateable<InsertObject<DB, TableName>>
+  ) {
+    return this
+      .updateTable()
+      .where((qb) => {
+        let currentQuery = qb;
+        for (const [column, value] of Object.entries(fields)) {
+          if (Array.isArray(value)) {
+            currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+          } else {
+            currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+          }
+        }
+        return currentQuery;
+      })
+      .set(data)
+      .returningAll()
+      .execute();
+  }
+
+  static async findOneByFieldsAndUpdate(
+    fields: Partial<{
+      [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
+    }>, 
+    data: Updateable<InsertObject<DB, TableName>>
+  ) {
+    // TODO use with and select with limit 1
+    return this
+      .updateTable()
+      .where((qb) => {
+        let currentQuery = qb;
+        for (const [column, value] of Object.entries(fields)) {
+          if (Array.isArray(value)) {
+            currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+          } else {
+            currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+          }
+        }
+        return currentQuery;
+      })
+      .set(data)
+      .returningAll()
+      .executeTakeFirst();
+  }
+
+  static async getOneByFieldsAndUpdate(
+    fields: Partial<{
+      [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
+    }>, 
+    data: Updateable<InsertObject<DB, TableName>>,
+    error: typeof NoResultError = NotFoundError,
+  ) {
+    // TODO use with and select with limit 1
+    return this
+      .updateTable()
+      .where((qb) => {
+        let currentQuery = qb;
+        for (const [column, value] of Object.entries(fields)) {
+          if (Array.isArray(value)) {
+            currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+          } else {
+            currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+          }
+        }
+        return currentQuery;
+      })
+      .set(data)
+      .returningAll()
+      .executeTakeFirstOrThrow(error);
+  }
+
+  static findByIdAndUpdate(id: SelectType<IdColumn>, data: Updateable<InsertObject<DB, TableName>>) {
     return this.findOneAndUpdate(this.id, id, data);
   }
   
-  static async getOneAndUpdate<ColumnName extends keyof DB[TableName] & string>(
+  static async getOneAndUpdate<ColumnName extends keyof Table & string>(
     column: ColumnName,
-    value: SelectType<DB[TableName][ColumnName]>,
+    value: SelectType<Table[ColumnName]>,
     data: Updateable<InsertObject<DB, TableName>>,
-    error: typeof NoResultError = NoResultError,
+    error: typeof NoResultError = NotFoundError,
   ) {
     const processedData = await this.beforeUpdate(data);
 
-    const item = await this
+    return this
       .updateTable()
       .where(this.ref(column as string), '=', value)
       .set(processedData)
       .returningAll()
       .executeTakeFirstOrThrow(error);
-
-    return this.create(item);
   }
 
-  static getByIdAndUpdate(id: SelectType<DB[TableName][IdColumnName]>, data: Updateable<InsertObject<DB, TableName>>) {
+  static getByIdAndUpdate(id: SelectType<IdColumn>, data: Updateable<InsertObject<DB, TableName>>) {
     return this.getOneAndUpdate(this.id, id, data);
   }
   
-  static lock<ColumnName extends keyof DB[TableName] & string>(
+  static lock<ColumnName extends keyof Table & string>(
     column: ColumnName,
-    value: SelectType<DB[TableName][ColumnName]>,
+    value: SelectType<Table[ColumnName]>,
   ) {
     return this
       .selectFrom()
@@ -451,29 +653,27 @@ class Model {
       .executeTakeFirst();
   }
 
-  static lockById(id: SelectType<DB[TableName][IdColumnName]>) {
+  static lockById(id: SelectType<IdColumn>) {
     return this.lock(this.id, id);
   }
   
   static async insert(
-    values: Insertable<DB[TableName]>,
-    error: typeof NoResultError = NoResultError,
+    values: Insertable<Table>,
+    error: typeof NoResultError = NotFoundError,
   ) {
     const processedValues = await this.beforeInsert(values);
 
-    const item = await this
+    return this
       .insertInto()
       .values(processedValues)
       .returningAll()
       .executeTakeFirstOrThrow(error);
-
-    return this.create(item);
   }
   
-  static async deleteOne<ColumnName extends keyof DB[TableName] & string>(
+  static async deleteOne<ColumnName extends keyof Table & string>(
     column: ColumnName,
-    value: SelectType<DB[TableName][ColumnName]>,
-    error: typeof NoResultError = NoResultError,
+    value: SelectType<Table[ColumnName]>,
+    error: typeof NoResultError = NotFoundError,
   ) {
     const { numDeletedRows } = await this
       .deleteFrom()
@@ -483,10 +683,10 @@ class Model {
     return numDeletedRows;
   }
 
-  static async deleteMany<ColumnName extends keyof DB[TableName] & string>(
+  static async deleteMany<ColumnName extends keyof Table & string>(
     column: ColumnName,
-    values: SelectType<DB[TableName][ColumnName]>[],
-    error: typeof NoResultError = NoResultError,
+    values: SelectType<Table[ColumnName]>[],
+    error: typeof NoResultError = NotFoundError,
   ) {
     const { numDeletedRows } = await this
       .deleteFrom()
@@ -496,8 +696,107 @@ class Model {
     return numDeletedRows;
   }
 
-  static deleteById(id: SelectType<DB[TableName][IdColumnName]>) {
+  static deleteById(id: SelectType<IdColumn>) {
     return this.deleteOne(this.id, id);
+  }
+
+  static relatedQuery<
+    FromTableName extends TableName,
+    FromColumnName extends keyof DB[TableName] & string,
+    ToTableName extends keyof DB & string,
+    ToColumnName extends keyof DB[ToTableName] & string,
+  >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>) {
+    const { from, to } = relation;
+    const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
+    const [toTable] = to.split('.') as [ToTableName, ToColumnName];
+
+    // const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+
+    // @ts-ignore
+    const ids = models.map((model) => model[fromColumn]);
+
+    return this
+      .db
+      .selectFrom(fromTable)
+      // @ts-ignore
+      .innerJoin(toTable, to, from)
+      // @ts-ignore
+      .where(from, 'in', ids)
+      .selectAll(toTable);
+  }
+
+  static async findRelated<
+    FromTableName extends TableName,
+    FromColumnName extends keyof DB[TableName] & string,
+    ToTableName extends keyof DB & string,
+    ToColumnName extends keyof DB[ToTableName] & string,
+  >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>) {
+    const { from, to } = relation;
+    const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
+    const [toTable] = to.split('.') as [ToTableName, ToColumnName];
+
+    // const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+
+    // @ts-ignore
+    const ids = models.map((model) => model[fromColumn]);
+
+    return this
+      .db
+      .selectFrom(fromTable)
+      // @ts-ignore
+      .innerJoin(toTable, to, from)
+      // @ts-ignore
+      .where(from, 'in', ids)
+      .selectAll(toTable)
+      .execute();
+  }
+
+  static async findRelatedAndCombine<
+    FromTableName extends TableName,
+    FromColumnName extends keyof DB[TableName] & string,
+    ToTableName extends keyof DB & string,
+    ToColumnName extends keyof DB[ToTableName] & string,
+    Field extends string,
+  >(models: Data[], relation: OneRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<Data & {
+    [key in Field]: Selectable<DB[ToTableName]>;
+  }[]>;
+  static async findRelatedAndCombine<
+    FromTableName extends TableName,
+    FromColumnName extends keyof DB[TableName] & string,
+    ToTableName extends keyof DB & string,
+    ToColumnName extends keyof DB[ToTableName] & string,
+    Field extends string,
+  >(models: Data[], relation: ManyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<Data & {
+    [key in Field]: Selectable<DB[ToTableName]>[];
+  }>;
+
+  static async findRelatedAndCombine<
+    FromTableName extends TableName,
+    FromColumnName extends keyof DB[TableName] & string,
+    ToTableName extends keyof DB & string,
+    ToColumnName extends keyof DB[ToTableName] & string,
+    Field extends string,
+  >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<any> {
+    const rows = await this.findRelated(models, relation);
+
+    const { type, from, to } = relation;
+    const [_fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
+    const [_toTable, toColumn] = to.split('.') as [ToTableName, ToColumnName];
+
+    const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+
+    // combine models and rows
+    return models.map((model) => {
+      // @ts-ignore
+      const id = model[fromColumn];
+      
+      const row = oneResult 
+        // @ts-ignore
+        ? rows.find((row) => row[toColumn] === id)
+        // @ts-ignore
+        : rows.filter((row) => row[toColumn] === id);
+      return { ...model, [field]: row };
+    });
   }
 }
 ```
