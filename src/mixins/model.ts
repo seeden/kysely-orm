@@ -13,7 +13,7 @@ export default function model<
   db: Database<DB>,
   table: TableName,
   id: IdColumnName,
-  NotFoundError: typeof NoResultError = NoResultError,
+  noResultError: typeof NoResultError = NoResultError,
 ) {
   type Table = DB[TableName];
   type IdColumn = Table[IdColumnName];
@@ -22,7 +22,7 @@ export default function model<
     static readonly db: Database<DB> = db;
     static readonly table: TableName = table;
     static readonly id: IdColumnName = id;
-    static readonly notFoundError: typeof NoResultError = NotFoundError;
+    static readonly noResultError: typeof NoResultError = noResultError;
 
     constructor(data: Data) {
       Object.assign(this, data);
@@ -182,7 +182,7 @@ export default function model<
 
     static async getOneByFields(fields: Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
-    }>, error: typeof NoResultError = NotFoundError) {
+    }>, error: typeof NoResultError = this.noResultError) {
       return this
         .selectFrom()
         .where((qb) => {
@@ -211,7 +211,7 @@ export default function model<
     static async getOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: SelectType<Table[ColumnName]>,
-      error: typeof NoResultError = NotFoundError,
+      error: typeof NoResultError = this.noResultError,
     ) {
       const item = await this
         .selectFrom()
@@ -296,7 +296,7 @@ export default function model<
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>, 
       data: Updateable<InsertObject<DB, TableName>>,
-      error: typeof NoResultError = NotFoundError,
+      error: typeof NoResultError = this.noResultError,
     ) {
       // TODO use with and select with limit 1
       return this
@@ -325,7 +325,7 @@ export default function model<
       column: ColumnName,
       value: SelectType<Table[ColumnName]>,
       data: Updateable<InsertObject<DB, TableName>>,
-      error: typeof NoResultError = NotFoundError,
+      error: typeof NoResultError = this.noResultError,
     ) {
       const processedData = await this.beforeUpdate(data);
 
@@ -359,7 +359,7 @@ export default function model<
     
     static async insert(
       values: Insertable<Table>,
-      error: typeof NoResultError = NotFoundError,
+      error: typeof NoResultError = this.noResultError,
     ) {
       const processedValues = await this.beforeInsert(values);
 
@@ -373,7 +373,7 @@ export default function model<
     static async deleteOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: SelectType<Table[ColumnName]>,
-      error: typeof NoResultError = NotFoundError,
+      error: typeof NoResultError = this.noResultError,
     ) {
       const { numDeletedRows } = await this
         .deleteFrom()
@@ -386,7 +386,7 @@ export default function model<
     static async deleteMany<ColumnName extends keyof Table & string>(
       column: ColumnName,
       values: SelectType<Table[ColumnName]>[],
-      error: typeof NoResultError = NotFoundError,
+      error: typeof NoResultError = this.noResultError,
     ) {
       const { numDeletedRows } = await this
         .deleteFrom()
