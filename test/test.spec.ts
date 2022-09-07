@@ -1,5 +1,5 @@
 
-import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId, isolate, Model } from '../dist/esm';
+import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId, isolate, Model, slug } from '../src';
 
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
@@ -20,6 +20,7 @@ interface Comments {
 interface DB {
   users: Users;
   users2: {
+    id: number;
     bla: string;
     test2: number;
   };
@@ -30,12 +31,52 @@ const db = new Database<DB>({
   connectionString: process.env.DATASABE_URL,
 });
 
-const User2 = db.model('users2', 'id', NoResultError)
+const User2 = db.model('users2', 'id', NoResultError);
+const Model2 = db.model('users', 'id', NoResultError);
 
-class User extends applyMixins(
-  db.model('users', 'id', NoResultError),
-  (base) => updatedAt(base, 'updatedAt'),
-  (base) => globalId(base),
+const UpdataedClass = updatedAt<DB, 'users', 'id', typeof Model2>(Model2, 'updatedAt');
+
+const GlobalClass = globalId<DB, 'users', 'id', typeof UpdataedClass>(UpdataedClass);
+const SlugClass = slug<DB, 'users', 'id', typeof GlobalClass>(GlobalClass, {
+  field: 'email',
+  sources: ['updatedAt', 'email'],
+  slugOptions: {
+    truncate: 15,
+    custom: {
+      quizana: '',
+      admin: '',
+    },
+  },
+});
+
+//class User extends SlugClass {
+/*
+class User extends slug(globalId(updatedAt(Model2, 'updatedAt')), {
+  field: 'email',
+  sources: ['updatedAt', 'email'],
+  slugOptions: {
+    truncate: 15,
+    custom: {
+      quizana: '',
+      admin: '',
+    },
+  },
+}) {
+*/
+class User extends applyMixins(db, 'users', 'id')(
+  (base) => updatedAt<DB, 'users', 'id', typeof base>(base, 'updatedAt'),
+  (base) => globalId<DB, 'users', 'id', typeof base>(base),
+  (base) => slug<DB, 'users', 'id', typeof base>(base, {
+    field: 'email',
+    sources: ['updatedAt', 'email'],
+    slugOptions: {
+      truncate: 15,
+      custom: {
+        quizana: '',
+        admin: '',
+      },
+    },
+  }),
 ) {
 
   static relations = {
@@ -68,7 +109,7 @@ class User extends applyMixins(
 const models = {
   User,
   User2,
-} as const;
+};
 
 const isolatedModels = isolate(models);
 isolatedModels.User.testttt();
@@ -88,8 +129,13 @@ User.findByEmail(12);
 User.findByEmail('12');
 User.findByGlobalId(12);
 User.findByGlobalId('3333');
+
+const item = await User.findBySlug('ffff');
 user2.updatedAt;
 user2.updatedAt2;
+
+isolatedModels.User.getLocalId(12);
+isolatedModels.User.getLocalId('12');
 
 
 /*

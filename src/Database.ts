@@ -62,7 +62,7 @@ export default class Database<DB> {
   model<
     TableName extends keyof DB & string, 
     IdColumnName extends keyof DB[TableName] & string,
-  >(table: TableName, id: IdColumnName, error?: typeof NoResultError): Model<DB, TableName, IdColumnName> {
+  >(table: TableName, id: IdColumnName, error?: typeof NoResultError) {
     return model(this, table, id, error);
   }
 

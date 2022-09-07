@@ -75,8 +75,13 @@ function generate<DB, TableName extends keyof DB>(data: Data, options: Options<D
   return slug;
 }
 
-export default function slug<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(
-  Base: Model<DB, TableName, IdColumnName>,
+export default function slug<
+  DB, 
+  TableName extends keyof DB & string, 
+  IdColumnName extends keyof DB[TableName] & string, 
+  TBase extends Model<DB, TableName, IdColumnName>,
+>(
+  Base: TBase,
   options: Options<DB, TableName>,
 ) {
   type Table = DB[TableName];

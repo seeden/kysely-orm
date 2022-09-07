@@ -29,7 +29,7 @@ function fromGlobalId(globalId: string): {
   };
 }
 
-export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string>(Base: Model<DB, TableName, IdColumnName>) {
+export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Model<DB, TableName, IdColumnName>>(Base: TBase) {
   type Table = DB[TableName];
   type IdColumn = SelectType<Table[IdColumnName]>;
   

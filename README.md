@@ -201,10 +201,12 @@ Sometimes you want to use same logic across your models. For example automatical
 Here is example how to define model which has support for mixins.
 
 ```ts 
-import { applyMixins, updatedAt } from 'kysely-orm';
+import { updatedAt } from 'kysely-orm';
 import db from './db';
 
-class User extends updatedAt<DB, 'users', 'id'>('updatedAt')(db.model('users', 'id')) {
+const BaseModel = db.model('users', 'id');
+
+class User extends updatedAt<DB, 'users', 'id', typeof BaseModel>(BaseModel, 'updatedAt') {
   findByEmail(email: string) {
     return this.findOne('email', email);
   }
@@ -219,10 +221,9 @@ If you are using many mixins it can be complicated and messy. Therefore you can 
 import { applyMixins, updatedAt, slug } from 'kysely-orm';
 import db from './db';
 
-class User extends applyMixins(
-  db.model('users', 'id'),
-  (model) => updatedAt(model, 'updatedAt'),
-  (model) => slug(model, {
+class User extends applyMixins(db, 'users', 'id')(
+  (model) => <DB, 'users', 'id', typeof model>updatedAt(model, 'updatedAt'),
+  (model) => <DB, 'users', 'id', typeof model>slug(model, {
     field: 'username',
     sources: ['name', 'firstName', 'lastName'],
     slugOptions: {
@@ -244,9 +245,8 @@ It will set your db field to NOW() during any update
 import { applyMixins, updatedAt } from 'kysely-orm';
 import db from './db';
 
-export default class User extends applyMixins(
-  db.model('users', 'id'),
-  (model) => updatedAt(model, 'updatedAt'),
+export default class User extends applyMixins(db, 'users', 'id')(
+  (model) => <DB, 'users', 'id', typeof model>updatedAt(model, 'updatedAt'),
 ) {
   findByEmail(email: string) {
     return this.findOne('email', email);
@@ -262,9 +262,8 @@ It will automatically compute url slug from your data and use it during db inser
 import { applyPlugins, slug } from 'kysely-orm';
 import type DB from './@types/DB';
 
-export default class User extends applyMixins(
-  db.model('users', 'id'),
-  (model) => slug(model, {
+export default class User extends applyMixins(db, 'users', 'id')(
+  (model) => <DB, 'users', 'id', typeof model>slug(model, {
     field: 'username',
     sources: ['name', 'firstName', 'lastName'],
     slugOptions: {

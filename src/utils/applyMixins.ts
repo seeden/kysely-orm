@@ -1,162 +1,169 @@
-import { Selectable } from 'kysely';
-import Constructor from '../@types/Constructor';
+import Database from '../Database';
+import model, { type Model } from '../mixins/model';
 
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor<Selectable<DB[TableName]>>,
->(
-  base: TBase,
-): TBase;
-
-function applyMixins<
+export default function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string,
-  TBase extends Constructor<Selectable<DB[TableName]>>,
-  T1,
->(
-  base: TBase,
-  applyMixin1: (base: TBase) => T1,
-): T1;
+>(db: Database<DB>, table: TableName, id: IdColumnName) {
+  const BaseClass = model(db, table, id);
 
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor<Selectable<DB[TableName]>>,
-  T1,
-  T2,
->(
-  base: TBase,
-  applyMixin1: (base: TBase) => T1,
-  applyMixin2: (base: T1) => T2,
-): T2;
+  function process(): typeof BaseClass;
+  function process<
+    T1,
+  >(mixin1: (base: Model<DB, TableName, IdColumnName>) => T1): T1;
 
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor<Selectable<DB[TableName]>>,
-  T1,
-  T2,
-  T3,
->(
-  base: TBase,
-  applyMixin1: (base: TBase) => T1,
-  applyMixin2: (base: T1) => T2,
-  applyMixin3: (base: T2) => T3,
-): T3;
+  function process<
+    T1,
+    T2,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+  ): T2;
 
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor<Selectable<DB[TableName]>>,
-  T1,
-  T2,
-  T3,
-  T4,
->(
-  base: TBase,
-  applyMixin1: (base: TBase) => T1,
-  applyMixin2: (base: T1) => T2,
-  applyMixin3: (base: T2) => T3,
-  applyMixin4: (base: T3) => T4,
-): T4;
+  function process<
+    T1,
+    T2,
+    T3,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+  ): T3;
 
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor<Selectable<DB[TableName]>>,
-  T1,
-  T2,
-  T3,
-  T4,
-  T5,
->(
-  base: TBase,
-  applyMixin1: (base: TBase) => T1,
-  applyMixin2: (base: T1) => T2,
-  applyMixin3: (base: T2) => T3,
-  applyMixin4: (base: T3) => T4,
-  applyMixin5: (base: T4) => T5,
-): T5;
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+    mixin4: (base: T3) => T4,
+  ): T4;
 
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor<Selectable<DB[TableName]>>,
-  T1,
-  T2,
-  T3,
-  T4,
-  T5,
-  T6
->(
-  base: TBase,
-  applyMixin1: (base: TBase) => T1,
-  applyMixin2: (base: T1) => T2,
-  applyMixin3: (base: T2) => T3,
-  applyMixin4: (base: T3) => T4,
-  applyMixin5: (base: T4) => T5,
-  applyMixin6: (base: T5) => T6,
-): T6;
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+    mixin4: (base: T3) => T4,
+    mixin5: (base: T4) => T5,
+  ): T5;
 
-function applyMixins<
-  DB, 
-  TableName extends keyof DB & string, 
-  IdColumnName extends keyof DB[TableName] & string, 
-  TBase extends Constructor<Selectable<DB[TableName]>>,
-  T1,
-  T2,
-  T3,
-  T4,
-  T5,
-  T6,
->(
-  base: TBase,
-  applyMixin1?: (base: TBase) => T1,
-  applyMixin2?: (base: T1) => T2,
-  applyMixin3?: (base: T2) => T3,
-  applyMixin4?: (base: T3) => T4,
-  applyMixin5?: (base: T4) => T5,
-  applyMixin6?: (base: T5) => T6,
-) {
-  if (!applyMixin1) {
-    return base;
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+    mixin4: (base: T3) => T4,
+    mixin5: (base: T4) => T5,
+    mixin6: (base: T5) => T6,
+  ): T6;
+
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+    mixin4: (base: T3) => T4,
+    mixin5: (base: T4) => T5,
+    mixin6: (base: T5) => T6,
+    mixin7: (base: T6) => T7,
+  ): T7;
+
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+    T8,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+    mixin4: (base: T3) => T4,
+    mixin5: (base: T4) => T5,
+    mixin6: (base: T5) => T6,
+    mixin7: (base: T6) => T7,
+    mixin8: (base: T7) => T8,
+  ): T8;
+
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+    T8,
+  >(
+    mixin1?: (base: Model<DB, TableName, IdColumnName>) => T1, 
+    mixin2?: (base: T1) => T2,
+    mixin3?: (base: T2) => T3,
+    mixin4?: (base: T3) => T4,
+    mixin5?: (base: T4) => T5,
+    mixin6?: (base: T5) => T6,
+    mixin7?: (base: T6) => T7,
+    mixin8?: (base: T7) => T8,
+  ) {
+    if (!mixin1) {
+      return BaseClass;
+    }
+
+    if (!mixin2) {
+      return mixin1(BaseClass);
+    }
+  
+    if (!mixin3) {
+      return mixin2(mixin1(BaseClass));
+    }
+
+    if (!mixin4) {
+      return mixin3(mixin2(mixin1(BaseClass)));
+    }
+
+    if (!mixin5) {
+      return mixin4(mixin3(mixin2(mixin1(BaseClass))));
+    }
+
+    if (!mixin6) {
+      return mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass)))));
+    }
+
+    if (!mixin7) {
+      return mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass))))));
+    }
+
+    if (!mixin8) {
+      return mixin7(mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass)))))));
+    }
+
+    return mixin8(mixin7(mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass))))))));
   }
 
-  const mixin1Class = applyMixin1(base);
-  if (!applyMixin2) {
-    return mixin1Class;
-  }
-
-  const mixin2Class = applyMixin2(mixin1Class);
-  if (!applyMixin3) {
-    return mixin2Class;
-  }
-
-  const mixin3Class = applyMixin3(mixin2Class);
-  if (!applyMixin4) {
-    return mixin3Class;
-  }
-
-  const mixin4Class = applyMixin4(mixin3Class);
-  if (!applyMixin5) {
-    return mixin4Class;
-  }
-
-  const mixin5Class = applyMixin5(mixin4Class);
-  if (!applyMixin6) {
-    return mixin5Class;
-  }
-
-  const Mixin6Class = applyMixin6(mixin5Class);
-  return Mixin6Class;
+  return process;
 }
-
-export default applyMixins;

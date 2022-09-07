@@ -24,8 +24,9 @@ export default function model<
     static readonly id: IdColumnName = id;
     static readonly noResultError: typeof NoResultError = noResultError;
 
-    constructor(data: Data) {
-      Object.assign(this, data);
+    // constructor(data: Data);
+    constructor(...args: any[]) {
+      Object.assign(this, args[0]);
     }
 
     static relation<
