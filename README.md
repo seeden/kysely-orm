@@ -185,9 +185,10 @@ The afterCommit hook does not modify the return value of the transaction.
 For each http request, you should create a new isolated model instance (best security practice). Here is an example of how to do that.
 
 ```ts
+import { isolate } from 'kysely-orm';
 import { User } from '../models';
 
-const IsolatedUser = User.isolate();
+const { User: IsolatedUser } = isolate({ User });
 ```
 
 For example why to use it: 

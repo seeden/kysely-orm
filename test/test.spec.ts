@@ -1,5 +1,5 @@
 
-import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId } from '../dist/esm';
+import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId, isolate, Model } from '../dist/esm';
 
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
@@ -98,12 +98,24 @@ class User extends applyMixins(
   }
 }
 
+const models = {
+  User,
+};
+
+const isolatedModels = isolate({ User });
+
+isolatedModels.User.getById(1);
+isolatedModels.User.findByEmail('ssss');
+isolatedModels.User.findByEmail(12);
+isolatedModels.User.findByEmail('12');
+isolatedModels.User.findByGlobalId(12);
+isolatedModels.User.findByGlobalId('3333');
+
 const user2 = await User.getById('dddd');
 User.findByEmail(12);
 User.findByEmail('12');
 User.findByGlobalId(12);
 User.findByGlobalId('3333');
-
 user2.updatedAt;
 user2.updatedAt2;
 
@@ -149,6 +161,7 @@ const user = new User({
   updatedAt: 'test',
   // additional: 234,
 });
+
 
 
 user.email;

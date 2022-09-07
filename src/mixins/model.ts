@@ -81,10 +81,6 @@ export default function model<
       return data;
     }
 
-    static isolate() {
-      return class extends this {};
-    }
-
     static transaction<Type>(callback: TransactionCallback<DB, Type>) {
       return this.db.transaction(callback);
     }
