@@ -1,22 +1,14 @@
-import { type Model } from '../mixins/model';
 import Constructor from '../@types/Constructor';
-type Hash<T> = { [modelName: string]: T };
 
-export default function isolate<
-  // DB, 
-  // TableName extends keyof DB & string,
-  //IdColumnName extends keyof DB[TableName] & string,
-  T extends Constructor<any>,
->(
-  obj: Hash<T>
-): Hash<T> {
-  const result: Hash<T> = {};
+export default function isolate<Models extends Record<string, Constructor<any>>>(models: Models): Models {
+  const keys: (keyof Models)[] = Object.keys(models);
+  const isolatedModels = <Models>{};
 
-  Object.keys(obj).forEach((key) => {
-    const ModelClass = obj[key];
+  for (const key of keys) {
+    const model = models[key];
 
-    result[key] = class IsolatedModel extends ModelClass {};
-  });
+    isolatedModels[key] = class IsolatedModel extends model {};
+  }
 
-  return result;
+  return isolatedModels;
 }

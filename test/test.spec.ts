@@ -21,6 +21,7 @@ interface DB {
   users: Users;
   users2: {
     bla: string;
+    test2: number;
   };
   comments: Comments;
 };
@@ -28,45 +29,11 @@ interface DB {
 const db = new Database<DB>({
   connectionString: process.env.DATASABE_URL,
 });
-/*
-class User extends globalId(updatedAt(db.model('users', 'id', NoResultError))('updatedAt'))() {
-  static relations = {
-    comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
-    comments2: this.relation(RelationType.HasManyRelation, 'users.id', 'comments.userId'),
-  };
 
-  static findByEmail(email: string) {
-    return this.findOne('email', email);
-  }
-
-  static updateByEmail(email: string, data: Partial<Users>) {
-    return this.updateTable().where('email', '=', email).set(data).execute();
-  }
-
-  static testttt() {
-    return this.db.selectFrom('users').innerJoin('comments', 'users.id', 'comments.userId').execute();
-
-  }
-
-  get item() {
-    return 1;
-  }
-
-  get i() {
-    return 'ddd';
-  }
-}
-*/
-
-
-const Model = db.model('users', 'id', NoResultError);
-
-const MixedModel = applyMixins(Model);
-
-console.log('MixedModel', MixedModel);
+const User2 = db.model('users2', 'id', NoResultError)
 
 class User extends applyMixins(
-  Model,
+  db.model('users', 'id', NoResultError),
   (base) => updatedAt(base, 'updatedAt'),
   (base) => globalId(base),
 ) {
@@ -100,11 +67,16 @@ class User extends applyMixins(
 
 const models = {
   User,
-};
+  User2,
+} as const;
 
-const isolatedModels = isolate({ User });
+const isolatedModels = isolate(models);
+isolatedModels.User.testttt();
+models.User.testttt();
 
-isolatedModels.User.getById(1);
+
+const result = await isolatedModels.User.getById(1);
+console.log('result', result);
 isolatedModels.User.findByEmail('ssss');
 isolatedModels.User.findByEmail(12);
 isolatedModels.User.findByEmail('12');
