@@ -1,3 +1,4 @@
+import { NoResultError } from 'kysely';
 import Database from '../Database';
 import model, { type Model } from '../mixins/model';
 
@@ -5,8 +6,8 @@ export default function applyMixins<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string,
->(db: Database<DB>, table: TableName, id: IdColumnName) {
-  const BaseClass = model(db, table, id);
+>(db: Database<DB>, table: TableName, id: IdColumnName, error?: typeof NoResultError) {
+  const BaseClass = model(db, table, id, error);
 
   function process(): typeof BaseClass;
   function process<
