@@ -31,23 +31,6 @@ const db = new Database<DB>({
   connectionString: process.env.DATASABE_URL,
 });
 
-const User2 = db.model('users2', 'id', NoResultError);
-const Model2 = db.model('users', 'id', NoResultError);
-
-const UpdataedClass = updatedAt<DB, 'users', 'id', typeof Model2>(Model2, 'updatedAt');
-
-const GlobalClass = globalId<DB, 'users', 'id', typeof UpdataedClass>(UpdataedClass);
-const SlugClass = slug<DB, 'users', 'id', typeof GlobalClass>(GlobalClass, {
-  field: 'email',
-  sources: ['updatedAt', 'email'],
-  slugOptions: {
-    truncate: 15,
-    custom: {
-      quizana: '',
-      admin: '',
-    },
-  },
-});
 
 //class User extends SlugClass {
 /*
@@ -108,13 +91,16 @@ class User extends applyMixins(db, 'users', 'id')(
 
 const models = {
   User,
-  User2,
+  User2: User,
 };
 
 const isolatedModels = isolate(models);
 isolatedModels.User.testttt();
 models.User.testttt();
 
+const result4 = await User.getById(1);
+
+const testData = await User.findOne('id', 1)
 
 const result = await isolatedModels.User.getById(1);
 console.log('result', result);
@@ -123,6 +109,9 @@ isolatedModels.User.findByEmail(12);
 isolatedModels.User.findByEmail('12');
 isolatedModels.User.findByGlobalId(12);
 isolatedModels.User.findByGlobalId('3333');
+
+const userGlobalId = isolatedModels.User.getGlobalId(result4);
+console.log(userGlobalId);
 
 const user2 = await User.getById('dddd');
 User.findByEmail(12);

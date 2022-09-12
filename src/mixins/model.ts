@@ -74,12 +74,16 @@ export default function model<
       };
     }
   
-    static async beforeInsert(data: Insertable<Table>) {
-      return data;
+    static async beforeInsert(data: Readonly<Insertable<Table>>) {
+      return {
+        ...data
+      } as Insertable<Table>;
     }
 
-    static async beforeUpdate(data: Updateable<InsertObject<DB, TableName>>) {
-      return data;
+    static async beforeUpdate(data: Readonly<Updateable<InsertObject<DB, TableName>>>) {
+      return {
+        ...data
+      } as Updateable<InsertObject<DB, TableName>>;
     }
 
     static transaction<Type>(callback: TransactionCallback<DB, Type>) {
@@ -116,7 +120,7 @@ export default function model<
 
     static async find<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      values: SelectType<Table[ColumnName]>[],
+      values: Readonly<SelectType<Table[ColumnName]>[]>,
     ) {
       return this
         .selectFrom()
@@ -127,7 +131,7 @@ export default function model<
 
     static async findOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      value: SelectType<Table[ColumnName]>,
+      value: Readonly<SelectType<Table[ColumnName]>>,
     ) {
       return this
         .selectFrom()
@@ -137,9 +141,9 @@ export default function model<
         .executeTakeFirst();
     }
 
-    static async findByFields(fields: Partial<{
+    static async findByFields(fields: Readonly<Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
-    }>) {
+    }>>) {
       return this
         .selectFrom()
         .where((qb) => {
@@ -157,9 +161,9 @@ export default function model<
         .execute();
     }
 
-    static async findOneByFields(fields: Partial<{
+    static async findOneByFields(fields: Readonly<Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
-    }>) {
+    }>>) {
       return this
         .selectFrom()
         .where((qb) => {
@@ -177,9 +181,9 @@ export default function model<
         .executeTakeFirst();
     }
 
-    static async getOneByFields(fields: Partial<{
+    static async getOneByFields(fields: Readonly<Partial<{
       [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
-    }>, error: typeof NoResultError = this.noResultError) {
+    }>>, error: typeof NoResultError = this.noResultError) {
       return this
         .selectFrom()
         .where((qb) => {
@@ -197,17 +201,17 @@ export default function model<
         .executeTakeFirstOrThrow(error);
     }
 
-    static findById(id: SelectType<IdColumn>) {
+    static findById(id: Readonly<SelectType<IdColumn>>) {
       return this.findOne(this.id, id);
     }
 
-    static findByIds(ids: SelectType<IdColumn>[]) {
+    static findByIds(ids: Readonly<SelectType<IdColumn>[]>) {
       return this.find(this.id, ids);
     }
 
     static async getOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      value: SelectType<Table[ColumnName]>,
+      value: Readonly<SelectType<Table[ColumnName]>>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const item = await this
@@ -220,14 +224,14 @@ export default function model<
       return item;
     }
 
-    static getById(id: SelectType<IdColumn>) {
+    static getById(id: Readonly<SelectType<IdColumn>>) {
       return this.getOne(this.id, id);
     }
     
     static async findOneAndUpdate<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      value: SelectType<Table[ColumnName]>,
-      data: Updateable<InsertObject<DB, TableName>>,
+      value: Readonly<SelectType<Table[ColumnName]>>,
+      data: Readonly<Updateable<InsertObject<DB, TableName>>>,
     ) {
       const processedData = await this.beforeUpdate(data);
 
@@ -240,11 +244,13 @@ export default function model<
     }
 
     static async findByFieldsAndUpdate(
-      fields: Partial<{
+      fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
-      }>, 
-      data: Updateable<InsertObject<DB, TableName>>
+      }>>, 
+      data: Readonly<Updateable<InsertObject<DB, TableName>>>
     ) {
+      const processedData = await this.beforeUpdate(data);
+
       return this
         .updateTable()
         .where((qb) => {
@@ -258,17 +264,18 @@ export default function model<
           }
           return currentQuery;
         })
-        .set(data)
+        .set(processedData)
         .returningAll()
         .execute();
     }
 
     static async findOneByFieldsAndUpdate(
-      fields: Partial<{
+      fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
-      }>, 
-      data: Updateable<InsertObject<DB, TableName>>
+      }>>, 
+      data: Readonly<Updateable<InsertObject<DB, TableName>>>
     ) {
+      const processedData = await this.beforeUpdate(data);
       // TODO use with and select with limit 1
       return this
         .updateTable()
@@ -283,18 +290,20 @@ export default function model<
           }
           return currentQuery;
         })
-        .set(data)
+        .set(processedData)
         .returningAll()
         .executeTakeFirst();
     }
 
     static async getOneByFieldsAndUpdate(
-      fields: Partial<{
+      fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
-      }>, 
-      data: Updateable<InsertObject<DB, TableName>>,
+      }>>, 
+      data: Readonly<Updateable<InsertObject<DB, TableName>>>,
       error: typeof NoResultError = this.noResultError,
     ) {
+      const processedData = await this.beforeUpdate(data);
+
       // TODO use with and select with limit 1
       return this
         .updateTable()
@@ -309,7 +318,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .set(data)
+        .set(processedData)
         .returningAll()
         .executeTakeFirstOrThrow(error);
     }
@@ -320,8 +329,8 @@ export default function model<
     
     static async getOneAndUpdate<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      value: SelectType<Table[ColumnName]>,
-      data: Updateable<InsertObject<DB, TableName>>,
+      value: Readonly<SelectType<Table[ColumnName]>>,
+      data: Readonly<Updateable<InsertObject<DB, TableName>>>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const processedData = await this.beforeUpdate(data);
@@ -340,7 +349,7 @@ export default function model<
     
     static lock<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      value: SelectType<Table[ColumnName]>,
+      value: Readonly<SelectType<Table[ColumnName]>>,
     ) {
       return this
         .selectFrom()
@@ -355,7 +364,7 @@ export default function model<
     }
     
     static async insert(
-      values: Insertable<Table>,
+      values: Readonly<Insertable<Table>>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const processedValues = await this.beforeInsert(values);
@@ -369,7 +378,7 @@ export default function model<
     
     static async deleteOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      value: SelectType<Table[ColumnName]>,
+      value: Readonly<SelectType<Table[ColumnName]>>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const { numDeletedRows } = await this
@@ -382,7 +391,7 @@ export default function model<
 
     static async deleteMany<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      values: SelectType<Table[ColumnName]>[],
+      values: Readonly<SelectType<Table[ColumnName]>[]>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const { numDeletedRows } = await this
