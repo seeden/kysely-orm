@@ -112,7 +112,7 @@ export default class Database<DB> {
     return this.db.destroy();
   }
 
-  transaction<Type>(callback: TransactionCallback<DB, Type>) {
+  async transaction<Type>(callback: TransactionCallback<DB, Type>) {
     const transactionState = this.asyncLocalDb.getStore();
     if (transactionState && !transactionState.committed) {
       console.log('you are already in transaction. using current transaction instance');
@@ -124,36 +124,38 @@ export default class Database<DB> {
       });
     }
 
-    return this.db.transaction().execute<Type>(async (transaction) => {
-      const transactionState: TransactionState<DB> = {
+    const afterCommit: AfterCommitCallback[]  = [];
+
+    const result = this.db.transaction().execute<Type>(async (transaction) => {
+      const newTransactionState: TransactionState<DB> = {
         transaction,
         committed: false,
-        afterCommit: [],
+        afterCommit,
       };
 
-      const response = await new Promise<Type>((resolve, reject) => {
-        this.asyncLocalDb.run(transactionState, async () => {
+      return new Promise<Type>((resolve, reject) => {
+        this.asyncLocalDb.run(newTransactionState, async () => {
           try {
             const result = await callback({
               transaction,
               afterCommit(callback: AfterCommitCallback) {
-                transactionState.afterCommit.push(callback);
+                newTransactionState.afterCommit.push(callback);
               },
             });
             resolve(result);
           } catch (error) {
             reject(error);
           } finally {
-            transactionState.committed = true;
+            newTransactionState.committed = true;
           }
         });
       });
-
-      for (const afterCommit of transactionState.afterCommit) {
-        await afterCommit();
-      }
-
-      return response;
     });
+
+    for (const afterCommitCallback of afterCommit) {
+      await afterCommitCallback();
+    }
+
+    return result;
   }
 }
