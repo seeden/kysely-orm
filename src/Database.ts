@@ -1,7 +1,7 @@
 import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError } from 'kysely';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import model, { type Model } from './mixins/model';
+import model from './mixins/model';
 
 export type DatabaseConfig<DB> = {
   isolated?: boolean;

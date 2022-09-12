@@ -1,4 +1,4 @@
-
+import { Generated } from 'kysely';
 import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId, isolate, Model, slug } from '../src';
 
 if (!process.env.DATASABE_URL) {
@@ -6,9 +6,12 @@ if (!process.env.DATASABE_URL) {
 }
 
 interface Users {
-  id: number;
+  id: Generated<number>;
   email: string;
-  updatedAt: string;
+  name: string;
+  password: string;
+  username: Generated<string>;
+  updatedAt: Generated<string>;
 }
 
 interface Comments {
@@ -50,11 +53,11 @@ class User extends applyMixins(db, 'users', 'id')(
   (base) => updatedAt<DB, 'users', 'id', typeof base>(base, 'updatedAt'),
   (base) => globalId<DB, 'users', 'id', typeof base>(base),
   (base) => slug<DB, 'users', 'id', typeof base>(base, {
-    field: 'email',
-    sources: ['updatedAt', 'email'],
+    field: 'username',
+    sources: ['name'],
     slugOptions: {
       truncate: 15,
-      custom: {
+      dictionary: {
         quizana: '',
         admin: '',
       },
@@ -72,7 +75,7 @@ class User extends applyMixins(db, 'users', 'id')(
   }
 
   static updateByEmail(email: string, data: Partial<Users>) {
-    return this.updateTable().where('email', '=', email).set(data).execute();
+    // return this.updateTable().where('email', '=', email).set(data).execute();
   }
 
   static testttt() {
@@ -89,6 +92,7 @@ class User extends applyMixins(db, 'users', 'id')(
   }
 }
 
+/*
 const models = {
   User,
   User2: User,
@@ -136,6 +140,8 @@ user2.updatedAt2;
 isolatedModels.User.getLocalId(12);
 isolatedModels.User.getLocalId('12');
 
+*/
+
 
 /*
 class User extends applyMixins(
@@ -172,6 +178,7 @@ class User extends applyMixins(
 }
 */
 
+/*
 const user = new User({
   email: 'test@gmail.com',
   id: 234,
@@ -204,9 +211,20 @@ const dbPromise = new Promise<Database<DB>>((resolve) => {
   }, 1000);
 })
 
+*/
 
 describe('transactions', () => {
   it('should execute transaction via db', async () => {
+
+    const newUser = await User.insert({
+      email: 'zfedor+test890@gmail.com',
+      name: 'Zlatko Fedor',
+      password: 'test',
+    
+    })
+    
+    console.log('newUser', newUser);
+    /*
     console.log('isTransaction before transaction', db.isTransaction);
     await db.transaction(async () => {
       console.log('isTransaction before', db.isTransaction);
@@ -233,11 +251,11 @@ describe('transactions', () => {
 
     
 */
-
+/*
 
     const updatedRows = await User.findRelatedAndCombine([row], User.relations.comments2, 'comments2');
     console.log('last two comments', updatedRows);
-
+*
     /*
     comments[0].userId;
     comments[0].id;

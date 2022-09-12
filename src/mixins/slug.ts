@@ -1,7 +1,7 @@
 import { sql, type Insertable } from 'kysely';
 import urlSlug from 'url-slug';
 // @ts-ignore
-import * as Puid from 'puid';
+import Puid from 'puid';
 import { type Model } from './model';
 
 const puid = new Puid(true);
@@ -70,6 +70,8 @@ function generate<DB, TableName extends keyof DB>(data: Data, options: Options<D
     if (truncate && generatedSlug.length > truncate) {
       return generatedSlug.substring(0, truncate);
     }
+
+    return generatedSlug;
   }
 
   return slug;
