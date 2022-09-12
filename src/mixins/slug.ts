@@ -1,5 +1,5 @@
 import { sql, type Insertable } from 'kysely';
-import getSlug from 'speakingurl';
+import urlSlug from 'url-slug';
 // @ts-ignore
 import * as Puid from 'puid';
 import { type Model } from './model';
@@ -20,9 +20,7 @@ type Options<DB, TableName extends keyof DB> = {
   slugOptions?: {
     separator?: string;
     truncate?: number;
-    custom?: {
-      [key: string]: string;
-    };
+    dictionary?: { [key:string]: string };
   };
 };
 
@@ -33,7 +31,7 @@ function generate<DB, TableName extends keyof DB>(data: Data, options: Options<D
     slugOptions: {
       separator = '-',
       truncate = 50,
-      ...rest
+      dictionary = {},
     } = {},
   } = options;
 
@@ -64,11 +62,14 @@ function generate<DB, TableName extends keyof DB>(data: Data, options: Options<D
   }
 
   if (slug) {
-    return getSlug(slug, {
+    const generatedSlug = urlSlug(slug, {
       separator,
-      truncate,
-      ...rest,
+      dictionary,
     });
+
+    if (truncate && generatedSlug.length > truncate) {
+      return generatedSlug.substring(0, truncate);
+    }
   }
 
   return slug;
