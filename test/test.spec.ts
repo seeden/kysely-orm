@@ -100,7 +100,17 @@ models.User.testttt();
 
 const result4 = await User.getById(1);
 
-const testData = await User.findOne('id', 1)
+const testData = await User.findOne('id', 1);
+
+const fields = {
+  id: 1,
+  test: 2,
+  email: 'sss',
+  updatedAt: '2020-01-01',
+};
+const testData2 = await User.findByFields(fields);
+
+fields.test = 1;
 
 const result = await isolatedModels.User.getById(1);
 console.log('result', result);

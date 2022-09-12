@@ -1,5 +1,4 @@
 import { sql, type Insertable } from 'kysely';
-// @ts-ignore
 import getSlug from 'speakingurl';
 // @ts-ignore
 import * as Puid from 'puid';
