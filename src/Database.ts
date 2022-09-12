@@ -126,7 +126,7 @@ export default class Database<DB> {
 
     const afterCommit: AfterCommitCallback[]  = [];
 
-    const result = this.db.transaction().execute<Type>(async (transaction) => {
+    const result = await this.db.transaction().execute<Type>(async (transaction) => {
       const newTransactionState: TransactionState<DB> = {
         transaction,
         committed: false,
