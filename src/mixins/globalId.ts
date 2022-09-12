@@ -1,4 +1,4 @@
-import { type SelectType } from 'kysely';
+import { type SelectType, Selectable } from 'kysely';
 import { type Model } from './model';
 
 function base64(i: string): string {
@@ -32,10 +32,11 @@ function fromGlobalId(globalId: string): {
 export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Model<DB, TableName, IdColumnName>>(Base: TBase) {
   type Table = DB[TableName];
   type IdColumn = SelectType<Table[IdColumnName]>;
+  type Data = Selectable<Table>;
   
   return class GlobalId extends Base {
-    static getGlobalId(data: Table): string {
-      const value = data[this.id];
+    static getGlobalId(data: Data): string {
+      const value = data[this.id as unknown as keyof Data & string];
       if (typeof value === 'string' || typeof value === 'number') {
         return base64([this.table, value.toString()].join(':'));
       }
