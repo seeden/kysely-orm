@@ -1,4 +1,5 @@
 import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError } from 'kysely';
+import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import model from './mixins/model';
@@ -106,6 +107,10 @@ export default class Database<DB> {
 
   deleteFrom<TableName extends keyof DB & string>(table: TableName) {
     return this.db.deleteFrom(table);
+  }
+
+  with<Name extends string, Expression extends CommonTableExpression<DB, Name>>(name: Name, expression: Expression) {
+    return this.db.with(name, expression);
   }
 
   destroy() {

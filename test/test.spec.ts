@@ -83,6 +83,10 @@ class User extends applyMixins(db, 'users', 'id')(
 
   }
 
+  static widthExample() {
+    return this.with('comments', (db) => db.selectFrom('comments').where('id', '=', 1)).selectFrom('users').execute();
+  }
+
   get item() {
     return 1;
   }

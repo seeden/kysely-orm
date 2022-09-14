@@ -1,4 +1,5 @@
-import {type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError } from 'kysely';
+import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError } from 'kysely';
+import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
 import type ReferenceExpression from '../@types/ReferenceExpression';
@@ -116,6 +117,10 @@ export default function model<
 
     static deleteFrom() {
       return this.db.deleteFrom(this.table);
+    }
+
+    static with<Name extends string, Expression extends CommonTableExpression<DB, Name>>(name: Name, expression: Expression) {
+      return this.db.with(name, expression);
     }
 
     static async find<ColumnName extends keyof Table & string>(
