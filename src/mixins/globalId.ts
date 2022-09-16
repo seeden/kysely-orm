@@ -1,6 +1,8 @@
 import { type SelectType, Selectable } from 'kysely';
 import { type Model } from './model';
 
+type ParseCallback<IdType> = (id: string) => IdType;
+
 function base64(i: string): string {
   return Buffer.from(i, 'utf8').toString('base64');
 }
@@ -9,15 +11,15 @@ function unbase64(i: string): string {
   return Buffer.from(i, 'base64').toString('utf8');
 }
 
-function fromGlobalId(globalId: string): {
+function fromGlobalId<IdType>(globalId: string, parse: ParseCallback<IdType>): {
   type: string;
-  id: string;
+  id: ReturnType<typeof parse>;
 } {
   const unbasedGlobalId = unbase64(globalId);
   const delimiterPos = unbasedGlobalId.indexOf(':');
 
   const type = unbasedGlobalId.substring(0, delimiterPos);
-  const id: string | number = unbasedGlobalId.substring(delimiterPos + 1);
+  const id = parse(unbasedGlobalId.substring(delimiterPos + 1));
 
   if (!type || !id) {
     throw new Error('Node type or id is not defined in globalId');
@@ -29,9 +31,11 @@ function fromGlobalId(globalId: string): {
   };
 }
 
-export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Model<DB, TableName, IdColumnName>>(Base: TBase) {
+export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Model<DB, TableName, IdColumnName>>(
+  Base: TBase,
+  parseId: ParseCallback<SelectType<DB[TableName][IdColumnName]>>,
+) {
   type Table = DB[TableName];
-  type IdColumn = SelectType<Table[IdColumnName]>;
   type Data = Selectable<Table>;
   
   return class GlobalId extends Base {
@@ -45,7 +49,7 @@ export default function globalId<DB, TableName extends keyof DB & string, IdColu
     }
 
     static getLocalId(globalId: string) {
-      const { type, id } = fromGlobalId(globalId);
+      const { type, id } = fromGlobalId(globalId, parseId);
 
       if (this.table !== type) {
         throw new Error(`Model ${this.table} is not model ${type}`);
@@ -55,17 +59,17 @@ export default function globalId<DB, TableName extends keyof DB & string, IdColu
     }
 
     static findByGlobalId(globalId: string) {
-      const id = this.getLocalId(globalId) as IdColumn;
+      const id = this.getLocalId(globalId);
       return this.findById(id);
     }
 
     static getByGlobalId(globalId: string) {
-      const id = this.getLocalId(globalId) as IdColumn;
+      const id = this.getLocalId(globalId);
       return this.getById(id);
     }
 
     static findByGlobalIds(globalIds: string[]) {
-      const ids = globalIds.map((globalId) => this.getLocalId(globalId) as IdColumn);
+      const ids = globalIds.map((globalId) => this.getLocalId(globalId));
       return this.findByIds(ids);
     }
   }
