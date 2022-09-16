@@ -79,11 +79,18 @@ class User extends applyMixins(db, 'users', 'id')(
   }
 
   static testttt() {
-    return this.db.selectFrom('users').innerJoin('comments', 'users.id', 'comments.userId').execute();
+    return this.db.selectFrom('users').innerJoin('comments', 'users.id', 'comments.userId').if(!!1, (qb) => qb.where('id', '=', 2)).execute();
 
   }
 
   static widthExample() {
+
+
+
+    this.findOneAndUpdate('email', 'test', {
+      email: 'test',
+    }, (qb) => qb.where('id', '=', 1));
+
     return this.with('comments', (db) => db.selectFrom('comments').where('id', '=', 1)).selectFrom('users').execute();
   }
 

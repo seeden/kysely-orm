@@ -1,4 +1,4 @@
-import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError } from 'kysely';
+import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
@@ -126,31 +126,39 @@ export default function model<
     static async find<ColumnName extends keyof Table & string>(
       column: ColumnName,
       values: Readonly<SelectType<Table[ColumnName]>[]>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
       return this
         .selectFrom()
-        .where(this.ref(column as string), 'in', values)
         .selectAll()
+        .where(this.ref(column as string), 'in', values)
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .execute();
     }
 
     static async findOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
       return this
         .selectFrom()
-        .where(this.ref(column as string), '=', value)
         .selectAll()
+        .where(this.ref(column as string), '=', value)
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .limit(1)
         .executeTakeFirst();
     }
 
-    static async findByFields(fields: Readonly<Partial<{
-      [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
-    }>>) {
+    static async findByFields(
+      fields: Readonly<Partial<{
+        [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
+      }>>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+    ) {
       return this
         .selectFrom()
+        .selectAll()
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
@@ -162,15 +170,19 @@ export default function model<
           }
           return currentQuery;
         })
-        .selectAll()
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .execute();
     }
 
-    static async findOneByFields(fields: Readonly<Partial<{
-      [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
-    }>>) {
+    static async findOneByFields(
+      fields: Readonly<Partial<{
+        [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
+      }>>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+    ) {
       return this
         .selectFrom()
+        .selectAll()
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
@@ -182,7 +194,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .selectAll()
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .executeTakeFirst();
     }
 
@@ -237,13 +249,15 @@ export default function model<
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
       data: Readonly<Updateable<InsertObject<DB, TableName>>>,
+      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
     ) {
       const processedData = await this.beforeUpdate(data);
 
       return this
         .updateTable()
-        .where(this.ref(column as string), '=', value)
         .set(processedData)
+        .where(this.ref(column as string), '=', value)
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .returningAll()
         .executeTakeFirst();
     }
@@ -252,12 +266,14 @@ export default function model<
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
-      data: Readonly<Updateable<InsertObject<DB, TableName>>>
+      data: Readonly<Updateable<InsertObject<DB, TableName>>>,
+      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
     ) {
       const processedData = await this.beforeUpdate(data);
 
       return this
         .updateTable()
+        .set(processedData)
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
@@ -269,7 +285,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .set(processedData)
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .returningAll()
         .execute();
     }
@@ -278,12 +294,14 @@ export default function model<
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
-      data: Readonly<Updateable<InsertObject<DB, TableName>>>
+      data: Readonly<Updateable<InsertObject<DB, TableName>>>,
+      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
     ) {
       const processedData = await this.beforeUpdate(data);
       // TODO use with and select with limit 1
       return this
         .updateTable()
+        .set(processedData)
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
@@ -295,7 +313,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .set(processedData)
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .returningAll()
         .executeTakeFirst();
     }
@@ -328,8 +346,12 @@ export default function model<
         .executeTakeFirstOrThrow(error);
     }
 
-    static findByIdAndUpdate(id: SelectType<IdColumn>, data: Updateable<InsertObject<DB, TableName>>) {
-      return this.findOneAndUpdate(this.id, id, data);
+    static findByIdAndUpdate(
+      id: SelectType<IdColumn>, 
+      data: Updateable<InsertObject<DB, TableName>>,
+      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+    ) {
+      return this.findOneAndUpdate(this.id, id, data, qb);
     }
     
     static async getOneAndUpdate<ColumnName extends keyof Table & string>(
