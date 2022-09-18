@@ -198,9 +198,13 @@ export default function model<
         .executeTakeFirst();
     }
 
-    static async getOneByFields(fields: Readonly<Partial<{
-      [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
-    }>>, error: typeof NoResultError = this.noResultError) {
+    static async getOneByFields(
+      fields: Readonly<Partial<{
+        [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
+      }>>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      error: typeof NoResultError = this.noResultError,
+    ) {
       return this
         .selectFrom()
         .where((qb) => {
@@ -215,34 +219,47 @@ export default function model<
           return currentQuery;
         })
         .selectAll()
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .executeTakeFirstOrThrow(error);
     }
 
-    static findById(id: Readonly<SelectType<IdColumn>>) {
-      return this.findOne(this.id, id);
+    static findById(
+      id: Readonly<SelectType<IdColumn>>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+    ) {
+      return this.findOne(this.id, id, qb);
     }
 
-    static findByIds(ids: Readonly<SelectType<IdColumn>[]>) {
-      return this.find(this.id, ids);
+    static findByIds(
+      ids: Readonly<SelectType<IdColumn>[]>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+    ) {
+      return this.find(this.id, ids, qb);
     }
 
     static async getOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const item = await this
         .selectFrom()
-        .where(this.ref(column as string), '=', value)
         .selectAll()
+        .where(this.ref(column as string), '=', value)
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .limit(1)
         .executeTakeFirstOrThrow(error);
 
       return item;
     }
 
-    static getById(id: Readonly<SelectType<IdColumn>>) {
-      return this.getOne(this.id, id);
+    static getById(
+      id: Readonly<SelectType<IdColumn>>,
+      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      error: typeof NoResultError = this.noResultError,
+    ) {
+      return this.getOne(this.id, id, qb, error);
     }
     
     static async findOneAndUpdate<ColumnName extends keyof Table & string>(
@@ -323,6 +340,7 @@ export default function model<
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
       data: Readonly<Updateable<InsertObject<DB, TableName>>>,
+      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const processedData = await this.beforeUpdate(data);
@@ -330,6 +348,7 @@ export default function model<
       // TODO use with and select with limit 1
       return this
         .updateTable()
+        .set(processedData)
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
@@ -341,7 +360,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .set(processedData)
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .returningAll()
         .executeTakeFirstOrThrow(error);
     }
@@ -358,20 +377,27 @@ export default function model<
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
       data: Readonly<Updateable<InsertObject<DB, TableName>>>,
+      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const processedData = await this.beforeUpdate(data);
 
       return this
         .updateTable()
-        .where(this.ref(column as string), '=', value)
         .set(processedData)
+        .where(this.ref(column as string), '=', value)
+        .if(!!qb, (a: any) => <any>qb?.(a))
         .returningAll()
         .executeTakeFirstOrThrow(error);
     }
 
-    static getByIdAndUpdate(id: SelectType<IdColumn>, data: Updateable<InsertObject<DB, TableName>>) {
-      return this.getOneAndUpdate(this.id, id, data);
+    static getByIdAndUpdate(
+      id: SelectType<IdColumn>, 
+      data: Updateable<InsertObject<DB, TableName>>,
+      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+      error: typeof NoResultError = this.noResultError,
+    ) {
+      return this.getOneAndUpdate(this.id, id, data, qb, error);
     }
     
     static lock<ColumnName extends keyof Table & string>(
