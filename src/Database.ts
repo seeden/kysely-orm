@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError } from 'kysely';
+import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError, type LogEvent } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -6,6 +6,8 @@ import model from './mixins/model';
 
 export type DatabaseConfig<DB> = {
   isolated?: boolean;
+  log?: (event: LogEvent) => void;
+  debug?: boolean;
 } & ({
   connectionString: string;
 } | {
@@ -31,11 +33,15 @@ export default class Database<DB> {
   private kysely: Kysely<DB>;
   private asyncLocalDb = new AsyncLocalStorage<TransactionState<DB>>();
   readonly isolated;
+  readonly log;
+  readonly debug;
 
   static readonly HasManyRelation = 1;
 
   constructor(config: DatabaseConfig<DB>) {
     this.isolated = config.isolated ?? false;
+    this.log = config.log;
+    this.debug = config.debug ?? false;
 
     if ('kysely' in config) {
       this.kysely = config.kysely;
@@ -50,11 +56,15 @@ export default class Database<DB> {
         plugins: [
           new CamelCasePlugin(),
         ],
-        log(event) {
-          if (event.level === 'query') {
-            console.log(event?.query?.sql)
-            console.log(event?.query?.parameters)
+        log: (event) => {
+          if (this.debug) {
+            if (event.level === 'query') {
+              console.log(event?.query?.sql)
+              console.log(event?.query?.parameters)
+            }
           }
+
+          this.log?.(event);
         },
       });  
     }
