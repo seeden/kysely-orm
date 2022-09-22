@@ -1,10 +1,12 @@
-import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder } from 'kysely';
+import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
 import type ReferenceExpression from '../@types/ReferenceExpression';
 import { type OneRelation, type AnyRelation, type ManyRelation } from '../@types/Relation';
 import RelationType from '../constants/RelationType';
+
+const anyQueryBuilder = <AnyQueryBuilder>(queryBuilder: AnyQueryBuilder) => queryBuilder;
 
 export default function model<
   DB,
@@ -266,7 +268,7 @@ export default function model<
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
       data: Readonly<Updateable<InsertObject<DB, TableName>>>,
-      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
       const processedData = await this.beforeUpdate(data);
 
@@ -274,7 +276,7 @@ export default function model<
         .updateTable()
         .set(processedData)
         .where(this.ref(column as string), '=', value)
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
     }
@@ -284,7 +286,7 @@ export default function model<
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
       data: Readonly<Updateable<InsertObject<DB, TableName>>>,
-      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
       const processedData = await this.beforeUpdate(data);
 
@@ -302,7 +304,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .execute();
     }
@@ -312,7 +314,7 @@ export default function model<
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
       data: Readonly<Updateable<InsertObject<DB, TableName>>>,
-      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
       const processedData = await this.beforeUpdate(data);
       // TODO use with and select with limit 1
@@ -330,7 +332,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
     }
@@ -340,7 +342,7 @@ export default function model<
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
       data: Readonly<Updateable<InsertObject<DB, TableName>>>,
-      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const processedData = await this.beforeUpdate(data);
@@ -360,7 +362,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
     }
@@ -368,16 +370,16 @@ export default function model<
     static findByIdAndUpdate(
       id: SelectType<IdColumn>, 
       data: Updateable<InsertObject<DB, TableName>>,
-      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
-      return this.findOneAndUpdate(this.id, id, data, qb);
+      return this.findOneAndUpdate(this.id, id, data, func);
     }
     
     static async getOneAndUpdate<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
       data: Readonly<Updateable<InsertObject<DB, TableName>>>,
-      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const processedData = await this.beforeUpdate(data);
@@ -386,7 +388,7 @@ export default function model<
         .updateTable()
         .set(processedData)
         .where(this.ref(column as string), '=', value)
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
     }
@@ -394,10 +396,10 @@ export default function model<
     static getByIdAndUpdate(
       id: SelectType<IdColumn>, 
       data: Updateable<InsertObject<DB, TableName>>,
-      qb?: (param: UpdateQueryBuilder<DB, TableName, TableName, {}>) => UpdateQueryBuilder<DB, TableName, TableName, {}>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      return this.getOneAndUpdate(this.id, id, data, qb, error);
+      return this.getOneAndUpdate(this.id, id, data, func, error);
     }
     
     static lock<ColumnName extends keyof Table & string>(
@@ -432,24 +434,56 @@ export default function model<
     static async deleteOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
+      func?: (qb: DeleteQueryBuilder<DB, TableName, DeleteResult>) => DeleteQueryBuilder<DB, TableName, DeleteResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const { numDeletedRows } = await this
         .deleteFrom()
         .where(this.ref(column as string), '=', value)
+        .if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
+        .limit(1)
         .executeTakeFirstOrThrow(error);
 
+      return numDeletedRows;
+    }
+
+    static async deleteOneByFields(
+      fields: Readonly<Partial<{
+        [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
+      }>>, 
+      func?: (qb: DeleteQueryBuilder<DB, TableName, DeleteResult>) => DeleteQueryBuilder<DB, TableName, DeleteResult>,
+      error: typeof NoResultError = this.noResultError,
+    ) {
+      const { numDeletedRows } = await this
+        .deleteFrom()
+        .where((qb) => {
+          let currentQuery = qb;
+          for (const [column, value] of Object.entries(fields)) {
+            if (Array.isArray(value)) {
+              currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+            } else {
+              currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+            }
+          }
+          return currentQuery;
+        })
+        .if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
+        .limit(1)
+        .executeTakeFirstOrThrow(error);
+      
       return numDeletedRows;
     }
 
     static async deleteMany<ColumnName extends keyof Table & string>(
       column: ColumnName,
       values: Readonly<SelectType<Table[ColumnName]>[]>,
+      func?: (qb: DeleteQueryBuilder<DB, TableName, DeleteResult>) => DeleteQueryBuilder<DB, TableName, DeleteResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const { numDeletedRows } = await this
         .deleteFrom()
         .where(this.ref(column as string), 'in', values)
+        .if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
         .executeTakeFirstOrThrow(error);
 
       return numDeletedRows;

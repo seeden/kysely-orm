@@ -84,7 +84,7 @@ class User extends applyMixins(db, 'users', 'id')(
   }
 
   static widthExample() {
-
+    this.deleteOneByFields({ id: 1 }, (qb) => qb.where('id', '=', 2));
 
 
     this.findOneAndUpdate('email', 'test', {
