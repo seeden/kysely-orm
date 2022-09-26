@@ -194,7 +194,7 @@ export default function cursorable<
     }
 
     static async getCursorable(options: CursorableOptions) {
-      return this.getCursorableQuery(options).selectAll().execute();
+      return this.getCursorableQuery(options).selectAll(this.table as never).execute();
     }
 
     static async getLazyCursorableConnection(options: CursorableOptions) {
