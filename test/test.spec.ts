@@ -110,7 +110,7 @@ class User extends applyMixins(db, 'users', 'id')(
   static async widthExample() {
     this.deleteOneByFields({ id: 1 }, (qb) => qb.where('id', '=', 2));
 
-    const connection = await this.getCursorableConnection({
+    const connection = await this.getLazyCursorableConnection({
       first: 4,
       sortKey: SortKey.CREATED_AT,
     });
@@ -267,7 +267,7 @@ const dbPromise = new Promise<Database<DB>>((resolve) => {
 describe('transactions', () => {
   it('should execute transaction via db', async () => {
 
-    const connection = await User.getCursorableConnection({
+    const connection = await User.getLazyCursorableConnection({
       first: 3,
       sortKey: SortKey.FOLLOWERS_COUNT,
     });
@@ -280,7 +280,7 @@ describe('transactions', () => {
     // @ts-ignore
     console.log('createdAt', createdAt, typeof createdAt, createdAt.toISOString());
 
-    const connection2 = await User.getCursorableConnection({
+    const connection2 = await User.getLazyCursorableConnection({
       first: 3,
       after: 'Wzk4MSwiMjAxOC0wNS0yNVQxODozMjowMC40MTlaIiw4OTk2NjVd',
       sortKey: SortKey.FOLLOWERS_COUNT,
@@ -293,7 +293,7 @@ describe('transactions', () => {
     console.log('totalCount', totalCount);
 
 
-    const connection3 = await User.getCursorableConnection({
+    const connection3 = await User.getLazyCursorableConnection({
       last: 3,
       sortKey: SortKey.FOLLOWERS_COUNT,
     });
@@ -301,7 +301,7 @@ describe('transactions', () => {
     const edges3 = await connection3.edges();
     console.log('edges with last', edges3);
 
-    const connection4 = await User.getCursorableConnection({
+    const connection4 = await User.getLazyCursorableConnection({
       last: 2,
       before: 'WzAsIjIwMTMtMDQtMjJUMDU6NTM6MzguMDAwWiIsMTEzMzEzXQ==',
       sortKey: SortKey.FOLLOWERS_COUNT,

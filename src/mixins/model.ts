@@ -429,6 +429,7 @@ export default function model<
         .executeTakeFirstOrThrow(error);
     }
     
+    // todo add limit via with
     static async deleteOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
@@ -439,12 +440,12 @@ export default function model<
         .deleteFrom()
         .where(this.ref(column as string), '=', value)
         .if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
-        .limit(1)
         .executeTakeFirstOrThrow(error);
 
       return numDeletedRows;
     }
 
+    // todo add limit via with
     static async deleteOneByFields(
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
@@ -466,7 +467,6 @@ export default function model<
           return currentQuery;
         })
         .if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
-        .limit(1)
         .executeTakeFirstOrThrow(error);
       
       return numDeletedRows;

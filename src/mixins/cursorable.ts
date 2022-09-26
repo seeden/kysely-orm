@@ -4,16 +4,6 @@ import { type Model } from './model';
 type ColumnSort<Table> = [keyof Table & string, 'ASC' | 'DESC', boolean?];
 type SortKeys<Table> = Record<string, ColumnSort<Table>[]>;
 
-export type CursorableOptions<Table, TSortKeys extends SortKeys<Table>> = {
-  sortKey?: keyof TSortKeys; 
-} & ({
-  first?: number;
-  after?: string;
-} | {
-  last?: number;
-  before?: string;
-});
-
 type Config<Table, TSortKeys extends SortKeys<Table>> = {
   sortKeys: TSortKeys;
   max?: number;
@@ -41,10 +31,17 @@ export default function cursorable<
     value: any;
   };
 
-  type CursorableOptionsWithFunc = CursorableOptions<Table, SortKeys<Table>> & {
+  type CursorableOptions = {
+    sortKey?: keyof typeof config.sortKeys; 
     func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     oneMore?: boolean,
-  };
+  } & ({
+    first?: number;
+    after?: string;
+  } | {
+    last?: number;
+    before?: string;
+  });
 
   if (!sortKeys) {
     throw new Error('sortKeys are not defined');
@@ -90,11 +87,11 @@ export default function cursorable<
     return Buffer.from(JSON.stringify(values)).toString('base64');
   }
 
-  function isQueryReversed(options: CursorableOptionsWithFunc) {
+  function isQueryReversed(options: CursorableOptions) {
     return 'last' in options || 'before' in options;
   }
 
-  function getLimit(options: CursorableOptionsWithFunc) {
+  function getLimit(options: CursorableOptions) {
     if ('first' in options) {
       return options.first ?? defaultLimit;
     }
@@ -106,7 +103,7 @@ export default function cursorable<
     return defaultLimit;
   }
 
-  function getCursor(options: CursorableOptionsWithFunc) {
+  function getCursor(options: CursorableOptions) {
     if ('last' in options || 'before' in options) {
       return options.before;
     }
@@ -139,7 +136,7 @@ export default function cursorable<
   }
 
   return class Cursorable extends Base  {
-    static getCursorableQuery(options: CursorableOptionsWithFunc) {
+    static getCursorableQuery(options: CursorableOptions) {
       const { sortKey = defaultSortKey, func, oneMore } = options;
       if (!sortKey) {
         throw new Error('Sort key is not defined');
@@ -196,11 +193,11 @@ export default function cursorable<
       return query;
     }
 
-    static async getCursorable(options: CursorableOptionsWithFunc) {
+    static async getCursorable(options: CursorableOptions) {
       return this.getCursorableQuery(options).selectAll().execute();
     }
 
-    static async getLazyCursorableConnection(options: CursorableOptionsWithFunc) {
+    static async getLazyCursorableConnection(options: CursorableOptions) {
       const { sortKey = defaultSortKey } = options;
 
       if (!sortKey) {
@@ -270,7 +267,7 @@ export default function cursorable<
       };
     }
 
-    static async getCursorableConnection(options: CursorableOptionsWithFunc) {
+    static async getCursorableConnection(options: CursorableOptions) {
       const connection = await this.getLazyCursorableConnection(options);
 
       return {
