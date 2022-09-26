@@ -1,5 +1,5 @@
 import { sql, type Updateable, type InsertObject } from 'kysely';
-import model, { type Model } from './model';
+import { type Model } from './model';
 
 export default function updatedAt<
   DB, 

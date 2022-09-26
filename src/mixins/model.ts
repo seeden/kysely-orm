@@ -6,8 +6,6 @@ import type ReferenceExpression from '../@types/ReferenceExpression';
 import { type OneRelation, type AnyRelation, type ManyRelation } from '../@types/Relation';
 import RelationType from '../constants/RelationType';
 
-const anyQueryBuilder = <AnyQueryBuilder>(queryBuilder: AnyQueryBuilder) => queryBuilder;
-
 export default function model<
   DB,
   TableName extends keyof DB & string, 
@@ -128,26 +126,26 @@ export default function model<
     static async find<ColumnName extends keyof Table & string>(
       column: ColumnName,
       values: Readonly<SelectType<Table[ColumnName]>[]>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
       return this
         .selectFrom()
         .selectAll()
         .where(this.ref(column as string), 'in', values)
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .execute();
     }
 
     static async findOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
       return this
         .selectFrom()
         .selectAll()
         .where(this.ref(column as string), '=', value)
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .limit(1)
         .executeTakeFirst();
     }
@@ -156,7 +154,7 @@ export default function model<
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
       return this
         .selectFrom()
@@ -172,7 +170,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .execute();
     }
 
@@ -180,7 +178,7 @@ export default function model<
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
       }>>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
       return this
         .selectFrom()
@@ -196,7 +194,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .executeTakeFirst();
     }
 
@@ -204,7 +202,7 @@ export default function model<
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
       }>>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
       error: typeof NoResultError = this.noResultError,
     ) {
       return this
@@ -221,35 +219,35 @@ export default function model<
           return currentQuery;
         })
         .selectAll()
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .executeTakeFirstOrThrow(error);
     }
 
     static findById(
       id: Readonly<SelectType<IdColumn>>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
-      return this.findOne(this.id, id, qb);
+      return this.findOne(this.id, id, func);
     }
 
     static findByIds(
       ids: Readonly<SelectType<IdColumn>[]>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
-      return this.find(this.id, ids, qb);
+      return this.find(this.id, ids, func);
     }
 
     static async getOne<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const item = await this
         .selectFrom()
         .selectAll()
         .where(this.ref(column as string), '=', value)
-        .if(!!qb, (a: any) => <any>qb?.(a))
+        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .limit(1)
         .executeTakeFirstOrThrow(error);
 
@@ -258,10 +256,10 @@ export default function model<
 
     static getById(
       id: Readonly<SelectType<IdColumn>>,
-      qb?: (param: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+      func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      return this.getOne(this.id, id, qb, error);
+      return this.getOne(this.id, id, func, error);
     }
     
     static async findOneAndUpdate<ColumnName extends keyof Table & string>(

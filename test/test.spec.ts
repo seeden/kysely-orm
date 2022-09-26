@@ -1,5 +1,5 @@
 import { Generated } from 'kysely';
-import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId, isolate, Model, slug } from '../src';
+import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId, isolate, Model, slug, cursorable } from '../src';
 
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
@@ -10,8 +10,10 @@ interface Users {
   email: string;
   name: string;
   password: string;
+  createdAt: Generated<number>;
   username: Generated<string>;
   updatedAt: Generated<string>;
+  followersCount: Generated<number>;
 }
 
 interface Comments {
@@ -32,6 +34,7 @@ interface DB {
 
 const db = new Database<DB>({
   connectionString: process.env.DATASABE_URL,
+  debug: true,
 });
 
 
@@ -49,9 +52,30 @@ class User extends slug(globalId(updatedAt(Model2, 'updatedAt')), {
   },
 }) {
 */
+
+enum SortKey {
+  CREATED_AT = 'CREATED_AT',
+  FOLLOWERS_COUNT = 'FOLLOWERS_COUNT',
+}
+
 class User extends applyMixins(db, 'users', 'id')(
   (base) => updatedAt<DB, 'users', 'id', typeof base>(base, 'updatedAt'),
   (base) => globalId<DB, 'users', 'id', typeof base>(base, Number),
+  (base) => cursorable<DB, 'users', 'id', typeof base>(base, {
+    sortKeys: {
+      [SortKey.CREATED_AT]: [
+        ['createdAt', 'ASC', true], 
+        ['id', 'ASC']
+      ],
+      [SortKey.FOLLOWERS_COUNT]: [
+        ['followersCount', 'DESC', true], 
+        ['createdAt', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    },
+    max: 100,
+    limit: 10,
+  }),
   (base) => slug<DB, 'users', 'id', typeof base>(base, {
     field: 'username',
     sources: ['name'],
@@ -83,8 +107,24 @@ class User extends applyMixins(db, 'users', 'id')(
 
   }
 
-  static widthExample() {
+  static async widthExample() {
     this.deleteOneByFields({ id: 1 }, (qb) => qb.where('id', '=', 2));
+
+    const connection = await this.getCursorableConnection({
+      first: 4,
+      sortKey: SortKey.CREATED_AT,
+    });
+
+    const edges = await connection.edges();
+
+    console.log('edges', edges);
+
+    // edges[0].node.id;
+    //edges[0].node.id2;
+
+
+
+    // connection.edges[0].node.name;
 
 
     this.findOneAndUpdate('email', 'test', {
@@ -227,6 +267,52 @@ const dbPromise = new Promise<Database<DB>>((resolve) => {
 describe('transactions', () => {
   it('should execute transaction via db', async () => {
 
+    const connection = await User.getCursorableConnection({
+      first: 3,
+      sortKey: SortKey.FOLLOWERS_COUNT,
+    });
+    
+    const edges = await connection.edges();
+    console.log('edges without after', edges);
+
+    const { createdAt } = edges[0].node;
+
+    // @ts-ignore
+    console.log('createdAt', createdAt, typeof createdAt, createdAt.toISOString());
+
+    const connection2 = await User.getCursorableConnection({
+      first: 3,
+      after: 'Wzk4MSwiMjAxOC0wNS0yNVQxODozMjowMC40MTlaIiw4OTk2NjVd',
+      sortKey: SortKey.FOLLOWERS_COUNT,
+    });
+
+    console.log('edges after fter', await connection2.edges());
+
+    const totalCount = await connection.totalCount();
+
+    console.log('totalCount', totalCount);
+
+
+    const connection3 = await User.getCursorableConnection({
+      last: 3,
+      sortKey: SortKey.FOLLOWERS_COUNT,
+    });
+    
+    const edges3 = await connection3.edges();
+    console.log('edges with last', edges3);
+
+    const connection4 = await User.getCursorableConnection({
+      last: 2,
+      before: 'WzAsIjIwMTMtMDQtMjJUMDU6NTM6MzguMDAwWiIsMTEzMzEzXQ==',
+      sortKey: SortKey.FOLLOWERS_COUNT,
+    });
+    
+    const edges4 = await connection4.edges();
+    console.log('edges with last and before', edges4);
+
+    
+
+    /*
     const newUser = await User.insert({
       email: 'zfedor+test890@gmail.com',
       name: 'Zlatko Fedor',
@@ -235,6 +321,7 @@ describe('transactions', () => {
     })
     
     console.log('newUser', newUser);
+    */
     /*
     console.log('isTransaction before transaction', db.isTransaction);
     await db.transaction(async () => {

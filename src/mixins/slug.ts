@@ -101,7 +101,7 @@ export default function slug<
       return this
         .selectFrom()
         .selectAll()
-        .where(this.db.dynamic.ref(column), '=', value)
+        .where(this.ref(column), '=', value)
         .limit(1)
         .executeTakeFirst();
     }
@@ -117,18 +117,16 @@ export default function slug<
       if (!rowWithSlug) {
         return slug;
       }
-    
-      const { ref } = this.db.dynamic;
 
       // TODO add lock by bigint (hashed slug)
     
       // generate new slug
       const firstRow = await this
         .selectFrom()
-        .where(ref(field), '~', `^${slug}[0-9]*$`)
+        .where(this.ref(field), '~', `^${slug}[0-9]*$`)
         .orderBy(sql`length(${sql.ref(field)})`, 'desc')
-        .orderBy(ref(field), 'desc')
-        .select(ref(field))
+        .orderBy(this.ref(field), 'desc')
+        .select(this.ref(field))
         .limit(1)
         .executeTakeFirst();
     
