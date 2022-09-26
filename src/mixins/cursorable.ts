@@ -163,7 +163,7 @@ export default function cursorable<
         .if(!!cursor, (qb) => qb.where((qb) => {
           const [first, ...rest] = parseCursor(sortKey, cursor);
 
-          const returnQb = qb.where(this.ref(first.column), getEqualOperator(first, isReversed), first.value);
+          const returnQb = qb.where(this.ref(`${this.table}.${first.column}`), getEqualOperator(first, isReversed), first.value);
 
           const processCursorParts = (innerQb: typeof qb, restCursorParts: typeof rest, previousCursorPart: typeof first): typeof qb => {
             if (!restCursorParts.length) {
@@ -174,9 +174,9 @@ export default function cursorable<
               const [nextCursorPart, ...nextRestCursorParts] = restCursorParts;
 
               return qb2
-                .where(this.ref(previousCursorPart.column), '=', previousCursorPart.value)
+                .where(this.ref(`${this.table}.${previousCursorPart.column}`), '=', previousCursorPart.value)
                 .where((qb3) => {
-                  const subInnerQb = qb3.where(this.ref(nextCursorPart.column), getEqualOperator(nextCursorPart, isReversed), nextCursorPart.value)
+                  const subInnerQb = qb3.where(this.ref(`${this.table}.${nextCursorPart.column}`), getEqualOperator(nextCursorPart, isReversed), nextCursorPart.value)
 
                   return processCursorParts(subInnerQb, nextRestCursorParts, nextCursorPart);
                 });
@@ -187,7 +187,7 @@ export default function cursorable<
         }));
 
       sortKeyConfig.forEach(([column, direction, reversable]) => {
-        query = query.orderBy(this.ref(column), getDirection(direction, reversable, isReversed));
+        query = query.orderBy(this.ref(`${this.table}.${column}`), getDirection(direction, reversable, isReversed));
       });
 
       return query;
@@ -259,7 +259,7 @@ export default function cursorable<
           const { count } = await this
             .selectFrom()
             .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
-            .select(sql`count(${this.ref(this.id)})`.as('count'))
+            .select(sql`count(${this.ref(`${this.table}.${this.id}`)})`.as('count'))
             .executeTakeFirstOrThrow(this.noResultError);
 
           return Number(count);
