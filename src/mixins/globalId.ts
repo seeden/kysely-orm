@@ -39,10 +39,9 @@ export default function globalId<DB, TableName extends keyof DB & string, IdColu
   type Data = Selectable<Table>;
   
   return class GlobalId extends Base {
-    static getGlobalId(data: Data): string {
-      const value = data[this.id as unknown as keyof Data & string];
-      if (typeof value === 'string' || typeof value === 'number') {
-        return base64([this.table, value.toString()].join(':'));
+    static getGlobalId(id: SelectType<DB[TableName][IdColumnName]>): string {
+      if (typeof id === 'string' || typeof id === 'number') {
+        return base64([this.table, id.toString()].join(':'));
       }
       
       throw new Error('Id is not defined');

@@ -1,4 +1,4 @@
-import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult } from 'kysely';
+import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
@@ -588,6 +588,31 @@ export default function model<
           : rows.filter((row) => row[toColumn] === id);
         return { ...model, [field]: row };
       });
+    }
+
+    static jsonbIncrement(column: keyof Table & string, data: Record<string, number>) {
+      const entries = Object.entries(data);
+      if (!entries.length) {
+        throw new Error('Data is empty');
+      }
+
+      const [[key, value], ...rest] = entries;
+
+      let update: RawBuilder<string> = sql`jsonb_set(
+        COALESCE(${this.ref(column)}, '{}'), 
+        ${sql.literal(`{${key}}`)}, 
+        (COALESCE(${this.ref(column)}->>${sql.literal(key)}, '0')::int + ${value})::text::jsonb
+      )`;
+
+      rest.forEach(([key, value]) => {
+        update = sql`jsonb_set(
+          ${update}, 
+          ${sql.literal(`{${key}}`)}, 
+          (COALESCE(${this.ref(column)}->>${sql.literal(key)}, '0')::int + ${value})::text::jsonb
+        )`;
+      });
+    
+      return update;
     }
   }
 }

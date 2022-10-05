@@ -1,9 +1,24 @@
-import { Generated } from 'kysely';
+import { Generated, ColumnType,  RawBuilder } from 'kysely';
 import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId, isolate, Model, slug, cursorable } from '../src';
+
 
 if (!process.env.DATASABE_URL) {
   throw new Error('DATASABE_URL environment variable is not set');
 }
+
+export type Json = ColumnType<JsonValue, string, string>;
+
+export type JsonArray = JsonValue[];
+
+export type JsonObject = {
+  [K in string]?: JsonValue;
+};
+
+export type JsonPrimitive = boolean | null | number | string;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
+export type Timestamp = ColumnType<Date | RawBuilder, Date | string | RawBuilder, Date | string | RawBuilder>;
 
 interface Users {
   id: Generated<number>;
@@ -22,6 +37,13 @@ interface Comments {
   userId: number;
 }
 
+interface Quizzes {
+  id: number;
+  updatedAt: Generated<string>;
+  createdAt: Generated<number>;
+  reactionStatistics: Json | null;
+}
+
 interface DB {
   users: Users;
   users2: {
@@ -30,6 +52,7 @@ interface DB {
     test2: number;
   };
   comments: Comments;
+  quizzes: Quizzes;
 };
 
 const db = new Database<DB>({
@@ -56,6 +79,22 @@ class User extends slug(globalId(updatedAt(Model2, 'updatedAt')), {
 enum SortKey {
   CREATED_AT = 'CREATED_AT',
   FOLLOWERS_COUNT = 'FOLLOWERS_COUNT',
+}
+
+class Quiz extends applyMixins(db, 'quizzes', 'id')(
+  (base) => updatedAt<DB, 'quizzes', 'id', typeof base>(base, 'updatedAt'),
+  (base) => globalId<DB, 'quizzes', 'id', typeof base>(base, Number),
+  (base) => cursorable<DB, 'quizzes', 'id', typeof base>(base, {
+    sortKeys: {
+      [SortKey.CREATED_AT]: [
+        ['createdAt', 'ASC', true], 
+        ['id', 'ASC']
+      ],
+    },
+    max: 100,
+    limit: 10,
+  }),
+) {
 }
 
 class User extends applyMixins(db, 'users', 'id')(
@@ -310,7 +349,20 @@ describe('transactions', () => {
     const edges4 = await connection4.edges();
     console.log('edges with last and before', edges4);
 
+    const quizBefore = await Quiz.findById(380);
+    console.log('quizBefore', quizBefore);
+    console.log('quizBefore', quizBefore?.reactionStatistics, JSON.stringify(quizBefore?.reactionStatistics));
     
+    const updatedQuiz = await Quiz.findByIdAndUpdate(380, {
+      reactionStatistics: Quiz.jsonbIncrement('reactionStatistics', {
+        increment: 7,
+        dscrement: -1,
+        nothing: 0,
+
+      }),
+    });
+
+    console.log('updatedQuiz', updatedQuiz);
 
     /*
     const newUser = await User.insert({
@@ -365,8 +417,8 @@ describe('transactions', () => {
 
     */
 
-    const user = await User.findByEmail('liviatlumacova@gmail.com');
-    console.log('user 2', user);
+    //const user = await User.findByEmail('liviatlumacova@gmail.com');
+    //console.log('user 2', user);
 
     //await User.fetchGraph([user], ['comments']);
     // console.log('user with comments', user);

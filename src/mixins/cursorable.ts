@@ -283,3 +283,10 @@ export default function cursorable<
     }
   }
 }
+
+export type Cursorable<
+  DB, 
+  TableName extends keyof DB & string, 
+  IdColumnName extends keyof DB[TableName] & string,
+  TBase extends Model<DB, TableName, IdColumnName>
+> = ReturnType<typeof cursorable<DB, TableName, IdColumnName, TBase>>;
