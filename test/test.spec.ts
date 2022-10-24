@@ -11,7 +11,7 @@ const dialect = new SqliteDialect({
 
 const db = new Database<DB>({
   dialect,
-  // debug: true,
+  debug: true,
 });
 
 const migrator = new Migrator({
@@ -251,6 +251,10 @@ describe('transactions', () => {
     await User.deleteOneByFields({
       email: 'test@gmail.com',
     });
+
+    await User.deleteOneByFields({
+      email: 'test-upsert@gmail.com',
+    });
   });
 
   it('should able to increment column', async () => {
@@ -278,6 +282,29 @@ describe('transactions', () => {
     });
 
     expect(updatedUser.followersCount).toBe(2);
+  });
+
+  it('should able to upsert', async () => {
+    const user = await User.upsert({
+      email: 'test-upsert@gmail.com',
+      name: 'Tester Before Upsert',
+      password: 'myPassword',
+    }, {
+      name: 'Tester after Upsert',
+    }, ['email']);
+
+    expect(user.name).toBe('Tester Before Upsert');
+
+
+    const updatedUser = await User.upsert({
+      email: 'test-upsert@gmail.com',
+      name: 'Tester Before Upsert',
+      password: 'myPassword',
+    }, {
+      name: 'Tester After Upsert',
+    }, ['email']);
+
+    expect(updatedUser.name).toBe('Tester After Upsert');
   });
 
 

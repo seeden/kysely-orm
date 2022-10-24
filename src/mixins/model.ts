@@ -1,4 +1,4 @@
-import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql } from 'kysely';
+import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type MutationObject, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
@@ -173,6 +173,25 @@ export default function model<
         })
         .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .execute();
+    }
+
+    static async upsert(
+      values: Readonly<Insertable<Table>>,
+      upsertValues: MutationObject<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
+      conflictColumns: Readonly<(keyof Table & string)[]>,
+      error: typeof NoResultError = this.noResultError,
+    ) {
+      const processedInsertValues = await this.beforeInsert(values);
+      // const processedUpdateValues = await this.beforeUpdate(upsertValues);
+
+      return this
+        .insertInto()
+        .values(processedInsertValues)
+        .onConflict((oc) => {
+          return oc.columns(conflictColumns).doUpdateSet(upsertValues) as OnConflictUpdateBuilder<DB, TableName>;
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow(error);
     }
 
     static async findOneByFields(

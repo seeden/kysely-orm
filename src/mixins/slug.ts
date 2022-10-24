@@ -1,4 +1,4 @@
-import { sql, type Insertable } from 'kysely';
+import { sql, SqliteAdapter, type Insertable } from 'kysely';
 import urlSlug from 'url-slug';
 // @ts-ignore
 import Puid from 'puid';
@@ -118,12 +118,14 @@ export default function slug<
         return slug;
       }
 
+      const operator = this.db.isSqlite ? 'like' : '~';
+
       // TODO add lock by bigint (hashed slug)
     
       // generate new slug
       const firstRow = await this
         .selectFrom()
-        .where(this.ref(field), '~', `^${slug}[0-9]*$`)
+        .where(this.ref(field), operator, `^${slug}[0-9]*$`)
         .orderBy(sql`length(${sql.ref(field)})`, 'desc')
         .orderBy(this.ref(field), 'desc')
         .select(this.ref(field))

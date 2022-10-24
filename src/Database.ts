@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError, type LogEvent, type Dialect } from 'kysely';
+import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError, type LogEvent, type Dialect, SqliteAdapter } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -73,6 +73,18 @@ export default class Database<DB> {
         },
       });  
     }
+  }
+
+  get adapter() {
+    return this.kysely.getExecutor().adapter;
+  }
+
+  get isSqlite() {
+    return this.adapter instanceof SqliteAdapter;
+  }
+
+  get isPostgres() {
+    return this.adapter instanceof PostgresDialect;
   }
 
   model<
