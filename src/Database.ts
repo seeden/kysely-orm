@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError, type LogEvent } from 'kysely';
+import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError, type LogEvent, type Dialect } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -10,6 +10,8 @@ export type DatabaseConfig<DB> = {
   debug?: boolean;
 } & ({
   connectionString: string;
+} | {
+  dialect: Dialect;
 } | {
   kysely: Kysely<DB>;
 });
@@ -46,13 +48,16 @@ export default class Database<DB> {
     if ('kysely' in config) {
       this.kysely = config.kysely;
     } else {
-      const { connectionString } = config;
-      this.kysely = new Kysely<DB>({
-        dialect: new PostgresDialect({
+      const dialect = ('dialect' in config)
+        ? config.dialect
+        : new PostgresDialect({
           pool: new Pool({
-            connectionString,
+            connectionString: config.connectionString,
           }),
-        }),
+        });
+
+      this.kysely = new Kysely<DB>({
+        dialect,
         plugins: [
           new CamelCasePlugin(),
         ],

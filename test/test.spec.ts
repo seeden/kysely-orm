@@ -1,80 +1,27 @@
-import { Generated, ColumnType,  RawBuilder } from 'kysely';
-import { Database, RelationType, NoResultError, applyMixins, updatedAt, globalId, isolate, Model, slug, cursorable } from '../src';
+import { SqliteDialect, Migrator, FileMigrationProvider } from 'kysely';
+import SQLLiteDatabase from 'better-sqlite3';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { Database, RelationType, applyMixins, updatedAt, globalId, slug, cursorable } from '../src';
+import DB, { Users } from './fixtures/DB';
 
-
-if (!process.env.DATASABE_URL) {
-  throw new Error('DATASABE_URL environment variable is not set');
-}
-
-export type Json = ColumnType<JsonValue, string, string>;
-
-export type JsonArray = JsonValue[];
-
-export type JsonObject = {
-  [K in string]?: JsonValue;
-};
-
-export type JsonPrimitive = boolean | null | number | string;
-
-export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
-
-export type Timestamp = ColumnType<Date | RawBuilder, Date | string | RawBuilder, Date | string | RawBuilder>;
-
-interface Users {
-  id: Generated<number>;
-  email: string;
-  name: string;
-  password: string;
-  createdAt: Generated<number>;
-  username: Generated<string>;
-  updatedAt: Generated<string>;
-  followersCount: Generated<number>;
-}
-
-interface Comments {
-  id: number;
-  updatedAt: string;
-  userId: number;
-}
-
-interface Quizzes {
-  id: number;
-  updatedAt: Generated<string>;
-  createdAt: Generated<number>;
-  reactionStatistics: Json | null;
-}
-
-interface DB {
-  users: Users;
-  users2: {
-    id: number;
-    bla: string;
-    test2: number;
-  };
-  comments: Comments;
-  quizzes: Quizzes;
-};
-
-const db = new Database<DB>({
-  connectionString: process.env.DATASABE_URL,
-  debug: true,
+const dialect = new SqliteDialect({
+  database: new SQLLiteDatabase('db.test'),
 });
 
+const db = new Database<DB>({
+  dialect,
+  // debug: true,
+});
 
-//class User extends SlugClass {
-/*
-class User extends slug(globalId(updatedAt(Model2, 'updatedAt')), {
-  field: 'email',
-  sources: ['updatedAt', 'email'],
-  slugOptions: {
-    truncate: 15,
-    custom: {
-      quizana: '',
-      admin: '',
-    },
-  },
-}) {
-*/
+const migrator = new Migrator({
+  db: db.db,
+  provider: new FileMigrationProvider({
+    fs,
+    path,
+    migrationFolder: path.join(__dirname, 'migrations'),
+  }),
+});
 
 enum SortKey {
   CREATED_AT = 'CREATED_AT',
@@ -96,6 +43,14 @@ class Quiz extends applyMixins(db, 'quizzes', 'id')(
   }),
 ) {
 }
+
+/*
+const quiz = await Quiz.getById(1);
+quiz.id;
+//quiz.sss;
+quiz.reactionStatistics;
+*/
+
 
 class User extends applyMixins(db, 'users', 'id')(
   (base) => updatedAt<DB, 'users', 'id', typeof base>(base, 'updatedAt'),
@@ -135,6 +90,10 @@ class User extends applyMixins(db, 'users', 'id')(
 
   static findByEmail(email: string) {
     return this.findOne('email', email);
+  }
+
+  static getByEmail(email: string) {
+    return this.getOne('email', email);
   }
 
   static updateByEmail(email: string, data: Partial<Users>) {
@@ -283,118 +242,82 @@ user.item;
 user.i;
 
 
-async function wait(db: Database<DB>) {
-  return new Promise((resolve) => {
-    console.log('isTransaction inside wait', db.isTransaction);
-    setTimeout(() =>{
-      console.log('isTransaction inside wait setTimeout callback', db.isTransaction);
-      resolve(1);
-    }, 1000);
-  })
-}
-
-const dbPromise = new Promise<Database<DB>>((resolve) => {
-  console.log('isTransaction inside promise', db.isTransaction);
-  setTimeout(() =>{
-    console.log('isTransaction inside promise setTimeout callback', db.isTransaction);
-    resolve(db);
-  }, 1000);
-})
-
 */
 
 describe('transactions', () => {
+  beforeAll(async () => {
+    await migrator.migrateToLatest();
+
+    await User.deleteOneByFields({
+      email: 'test@gmail.com',
+    });
+  });
+
+  it('should able to increment column', async () => {
+    const user = await User.insert({
+      email: 'test@gmail.com',
+      name: 'Tester',
+      password: 'myPassword',
+    });
+
+    expect(user.followersCount).toBe(0);
+
+    const updatedUser = await User.findByIdAndIncrement(user.id, {
+      followersCount: 3,
+    });
+
+    expect(updatedUser.followersCount).toBe(3);
+  });
+
+  it('should able to decrement column', async () => {
+    const user = await User.getByEmail('test@gmail.com');
+    expect(user.followersCount).toBe(3);
+
+    const updatedUser = await User.findByIdAndIncrement(user.id, {
+      followersCount: -1,
+    });
+
+    expect(updatedUser.followersCount).toBe(2);
+  });
+
+
   it('should execute transaction via db', async () => {
+    expect(db.isTransaction).toBe(false);
 
-    const connection = await User.getLazyCursorableConnection({
-      first: 3,
-      sortKey: SortKey.FOLLOWERS_COUNT,
-    });
-    
-    const edges = await connection.edges();
-    console.log('edges without after', edges);
-
-    const { createdAt } = edges[0].node;
-
-    // @ts-ignore
-    console.log('createdAt', createdAt, typeof createdAt, createdAt.toISOString());
-
-    const connection2 = await User.getLazyCursorableConnection({
-      first: 3,
-      after: 'Wzk4MSwiMjAxOC0wNS0yNVQxODozMjowMC40MTlaIiw4OTk2NjVd',
-      sortKey: SortKey.FOLLOWERS_COUNT,
+    // everything inside it should be executed outside of transaction
+    const dbPromise = new Promise<Database<DB>>((resolve) => {
+      expect(db.isTransaction).toBe(false);
+      setTimeout(() =>{
+        expect(db.isTransaction).toBe(false);
+        resolve(db);
+      }, 1000);
     });
 
-    console.log('edges after fter', await connection2.edges());
+    async function wait(db: Database<DB>) {
+      return new Promise((resolve) => {
+        expect(db.isTransaction).toBe(true);
+        setTimeout(() =>{
+          expect(db.isTransaction).toBe(true);
+          resolve(1);
+        }, 1000);
+      })
+    }
 
-    const totalCount = await connection.totalCount();
-
-    console.log('totalCount', totalCount);
-
-
-    const connection3 = await User.getLazyCursorableConnection({
-      last: 3,
-      sortKey: SortKey.FOLLOWERS_COUNT,
-    });
-    
-    const edges3 = await connection3.edges();
-    console.log('edges with last', edges3);
-
-    const connection4 = await User.getLazyCursorableConnection({
-      last: 2,
-      before: 'WzAsIjIwMTMtMDQtMjJUMDU6NTM6MzguMDAwWiIsMTEzMzEzXQ==',
-      sortKey: SortKey.FOLLOWERS_COUNT,
-    });
-    
-    const edges4 = await connection4.edges();
-    console.log('edges with last and before', edges4);
-
-    const quizBefore = await Quiz.findById(380);
-    console.log('quizBefore', quizBefore);
-    console.log('quizBefore', quizBefore?.reactionStatistics, JSON.stringify(quizBefore?.reactionStatistics));
-    
-    const updatedQuiz = await Quiz.findByIdAndUpdate(380, {
-      reactionStatistics: Quiz.jsonbIncrement('reactionStatistics', {
-        increment: 7,
-        dscrement: -1,
-        nothing: 0,
-
-      }),
-    });
-
-    console.log('updatedQuiz', updatedQuiz);
-
-    /*
-    const newUser = await User.insert({
-      email: 'zfedor+test890@gmail.com',
-      name: 'Zlatko Fedor',
-      password: 'test',
-    
-    })
-    
-    console.log('newUser', newUser);
-    */
-    /*
-    console.log('isTransaction before transaction', db.isTransaction);
     await db.transaction(async () => {
-      console.log('isTransaction before', db.isTransaction);
+      expect(db.isTransaction).toBe(true);
+
       await wait(db);
-      console.log('isTransaction after wait', db.isTransaction);
-      const user = await User.findByEmail('zfedor@gmail.com');
-      console.log('user 1', user);
+
+      expect(db.isTransaction).toBe(true);
+      const user = await User.findByEmail('test@gmail.com');
+      expect(user).toBeDefined();
 
       const dbFromPromise = await dbPromise;
-      console.log('isTransaction dbFromPromise after wait ', dbFromPromise.isTransaction);
-
-      
+      expect(dbFromPromise.isTransaction).toBe(true); 
     });
 
-    console.log('isTransaction after transaction ', db.isTransaction);
+    expect(db.isTransaction).toBe(false);
 
-    return;
-
-    const row = await User.getOne('email', 'zfedor@gmail.com');
-    console.log('row', row);
 /*
     const comments = await User.relatedQuery([row], User.relations.comments).limit(2).execute();
     console.log('last two comments', comments);

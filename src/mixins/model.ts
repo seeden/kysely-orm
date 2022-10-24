@@ -19,6 +19,7 @@ export default function model<
   type Table = DB[TableName];
   type IdColumn = Table[IdColumnName];
   type Data = Selectable<Table>;
+  type Id = Readonly<SelectType<IdColumn>>;
   return class Model {
     static readonly db: Database<DB> = db;
     static readonly table: TableName = table;
@@ -224,7 +225,7 @@ export default function model<
     }
 
     static findById(
-      id: Readonly<SelectType<IdColumn>>,
+      id: Id,
       func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
       return this.findOne(this.id, id, func);
@@ -255,7 +256,7 @@ export default function model<
     }
 
     static getById(
-      id: Readonly<SelectType<IdColumn>>,
+      id: Id,
       func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
       error: typeof NoResultError = this.noResultError,
     ) {
@@ -489,6 +490,30 @@ export default function model<
 
     static deleteById(id: SelectType<IdColumn>) {
       return this.deleteOne(this.id, id);
+    }
+
+    static findByIdAndIncrement(
+      id: Id, 
+      columns: Partial<Record<keyof Table, number>>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
+      error: typeof NoResultError = this.noResultError,
+    ) {
+      const setData: Updateable<InsertObject<DB, TableName>> = {};
+
+      Object.keys(columns).forEach((column) => {
+        const value = columns[column as keyof Table] as number;
+        const correctColumn = column as keyof Updateable<InsertObject<DB, TableName>>;
+
+        setData[correctColumn] = sql`${this.ref(column as string)} + ${value}` as any;
+      });
+
+      return this
+        .updateTable()
+        .set(setData)
+        .where(this.ref(this.id), '=', id)
+        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
+        .returningAll()
+        .executeTakeFirstOrThrow(error);
     }
 
     static relatedQuery<
