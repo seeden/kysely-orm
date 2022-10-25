@@ -3,3 +3,4 @@ dist
 ./src/test.ts
 .env
 package-lock.json
+.DS_Store

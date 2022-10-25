@@ -175,25 +175,6 @@ export default function model<
         .execute();
     }
 
-    static async upsert(
-      values: Readonly<Insertable<Table>>,
-      upsertValues: MutationObject<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
-      conflictColumns: Readonly<(keyof Table & string)[]>,
-      error: typeof NoResultError = this.noResultError,
-    ) {
-      const processedInsertValues = await this.beforeInsert(values);
-      // const processedUpdateValues = await this.beforeUpdate(upsertValues);
-
-      return this
-        .insertInto()
-        .values(processedInsertValues)
-        .onConflict((oc) => {
-          return oc.columns(conflictColumns).doUpdateSet(upsertValues) as OnConflictUpdateBuilder<DB, TableName>;
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow(error);
-    }
-
     static async findOneByFields(
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]>;
@@ -445,6 +426,46 @@ export default function model<
       return this
         .insertInto()
         .values(processedValues)
+        .returningAll()
+        .executeTakeFirstOrThrow(error);
+    }
+
+    static async upsert(
+      values: Readonly<Insertable<Table>>,
+      upsertValues: MutationObject<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
+      conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
+      error: typeof NoResultError = this.noResultError,
+    ) {
+      const processedInsertValues = await this.beforeInsert(values);
+      // const processedUpdateValues = await this.beforeUpdate(upsertValues);
+
+      return this
+        .insertInto()
+        .values(processedInsertValues)
+        .onConflict((oc) => oc
+          .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
+          .doUpdateSet(upsertValues) as OnConflictUpdateBuilder<DB, TableName>
+        )
+        .returningAll()
+        .executeTakeFirstOrThrow(error);
+    }
+
+    static async insertIfNotExists(
+      values: Readonly<Insertable<Table>>,
+      conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
+      error: typeof NoResultError = this.noResultError,
+    ) {
+      const processedInsertValues = await this.beforeInsert(values);
+
+      return this
+        .insertInto()
+        .values(processedInsertValues)
+        .onConflict((oc) => oc
+          .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
+          .doUpdateSet({
+            [id]: (eb: any) => eb.ref(`excluded.${id}`)
+          } as MutationObject<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>) as OnConflictUpdateBuilder<DB, TableName>
+        )
         .returningAll()
         .executeTakeFirstOrThrow(error);
     }

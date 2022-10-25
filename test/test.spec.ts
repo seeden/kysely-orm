@@ -255,6 +255,10 @@ describe('transactions', () => {
     await User.deleteOneByFields({
       email: 'test-upsert@gmail.com',
     });
+
+    await User.deleteOneByFields({
+      email: 'test-insert-only@gmail.com',
+    });
   });
 
   it('should able to increment column', async () => {
@@ -307,6 +311,23 @@ describe('transactions', () => {
     expect(updatedUser.name).toBe('Tester After Upsert');
   });
 
+  it('should able to insertIfNotExists', async () => {
+    const user = await User.insertIfNotExists({
+      email: 'test-insert-only@gmail.com',
+      name: 'Tester Before Insert Only',
+      password: 'myPassword',
+    }, 'email');
+
+    expect(user.name).toBe('Tester Before Insert Only');
+
+    const updatedUser = await User.insertIfNotExists({
+      email: 'test-insert-only@gmail.com',
+      name: 'Tester After Insert Only',
+      password: 'myPassword',
+    }, 'email');
+
+    expect(updatedUser.name).toBe('Tester Before Insert Only');
+  });
 
   it('should execute transaction via db', async () => {
     expect(db.isTransaction).toBe(false);
