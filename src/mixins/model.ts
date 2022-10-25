@@ -536,6 +536,29 @@ export default function model<
       id: Id, 
       columns: Partial<Record<keyof Table, number>>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
+    ) {
+      const setData: Updateable<InsertObject<DB, TableName>> = {};
+
+      Object.keys(columns).forEach((column) => {
+        const value = columns[column as keyof Table] as number;
+        const correctColumn = column as keyof Updateable<InsertObject<DB, TableName>>;
+
+        setData[correctColumn] = sql`${this.ref(column as string)} + ${value}` as any;
+      });
+
+      return this
+        .updateTable()
+        .set(setData)
+        .where(this.ref(this.id), '=', id)
+        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
+        .returningAll()
+        .executeTakeFirst();
+    }
+
+    static getByIdAndIncrement(
+      id: Id, 
+      columns: Partial<Record<keyof Table, number>>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const setData: Updateable<InsertObject<DB, TableName>> = {};

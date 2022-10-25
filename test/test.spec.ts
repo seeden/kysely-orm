@@ -270,7 +270,7 @@ describe('transactions', () => {
 
     expect(user.followersCount).toBe(0);
 
-    const updatedUser = await User.findByIdAndIncrement(user.id, {
+    const updatedUser = await User.getByIdAndIncrement(user.id, {
       followersCount: 3,
     });
 
@@ -281,7 +281,7 @@ describe('transactions', () => {
     const user = await User.getByEmail('test@gmail.com');
     expect(user.followersCount).toBe(3);
 
-    const updatedUser = await User.findByIdAndIncrement(user.id, {
+    const updatedUser = await User.getByIdAndIncrement(user.id, {
       followersCount: -1,
     });
 
