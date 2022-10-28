@@ -591,6 +591,87 @@ export default function model<
         .selectAll(toTable);
     }
 
+    static async findRelatedById<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(
+      relation: OneRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, 
+      id: Id,
+      error?: typeof NoResultError,
+    ): Promise<Selectable<DB[ToTableName]> | undefined>;
+
+    static async findRelatedById<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(
+      relation: ManyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, 
+      id: Id,
+      error?: typeof NoResultError,
+    ): Promise<Selectable<DB[ToTableName]>[]>;
+
+    static async findRelatedById<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(
+      relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, 
+      id: Id,
+    ): Promise<Selectable<DB[ToTableName]> | undefined | Selectable<DB[ToTableName]>[]> {
+      const { type } = relation;
+      const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+      if (oneResult) {
+        return await this.relatedQuery(relation, id).executeTakeFirst() as Selectable<DB[ToTableName]> | undefined;
+      }
+
+      return await this.relatedQuery(relation, id).execute() as Selectable<DB[ToTableName]>[];
+    }
+
+    static async getRelatedById<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(
+      relation: OneRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, 
+      id: Id,
+      error?: typeof NoResultError,
+    ): Promise<Selectable<DB[ToTableName]>>;
+
+    static async getRelatedById<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(
+      relation: ManyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, 
+      id: Id,
+      error?: typeof NoResultError,
+    ): Promise<Selectable<DB[ToTableName]>[]>;
+
+    static async getRelatedById<
+      FromTableName extends TableName,
+      FromColumnName extends keyof DB[TableName] & string,
+      ToTableName extends keyof DB & string,
+      ToColumnName extends keyof DB[ToTableName] & string,
+    >(
+      relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, 
+      id: Id,
+      error: typeof NoResultError = this.noResultError,
+    ): Promise<Selectable<DB[ToTableName]> | Selectable<DB[ToTableName]>[]> {
+      const { type } = relation;
+      const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+      if (oneResult) {
+        return await this.relatedQuery(relation, id).executeTakeFirstOrThrow(error) as Selectable<DB[ToTableName]>;
+      }
+
+      return await this.relatedQuery(relation, id).execute() as Selectable<DB[ToTableName]>[];
+    }
+
     static async findRelated<
       FromTableName extends TableName,
       FromColumnName extends keyof DB[TableName] & string,
@@ -657,6 +738,7 @@ export default function model<
           ? rows.find((row) => row[toColumn] === id)
           // @ts-ignore
           : rows.filter((row) => row[toColumn] === id);
+
         return { ...model, [field]: row };
       });
     }

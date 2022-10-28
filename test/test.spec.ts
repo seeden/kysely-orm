@@ -325,16 +325,44 @@ describe('transactions', () => {
     expect(updatedUser2.comments[0].message).toBe(comment3.message);
   });
 
+  it('should execute get related by id query', async () => {
+    const user = await User.getByEmail('test@gmail.com');
+ 
+    const comments = await User.getRelatedById(User.relations.comments, user.id);
+
+    expect(comments.length).toBe(2);
+    expect(comments[0].message).toBe('Test message');
+    expect(comments[1].message).toBe('Test message 2');
+  });
+
   it('should not call afterCommit', async () => {
+    let test;
+
+    await expect(async () => {
+      await User.transaction(async ({ afterCommit }) => {
+
+        afterCommit(async () => {
+          test = 'after commit success';
+          throw new Error('Should not be called');
+        });
+
+        throw new Error('Transaction rejected');
+      })
+    }).rejects.toThrowError("Transaction rejected");
+
+    expect(test).toBeUndefined();
+  });
+
+  it('should call afterCommit', async () => {
+    let test;
+    
     await User.transaction(async ({ afterCommit }) => {
       afterCommit(async () => {
-        throw new Error('Should not be called');
+        test = 'after commit success';
       });
-
-      throw new Error('Transaction rejected');
     });
 
-   // expect.assertions(1);
+    expect(test).toBe('after commit success');
   });
 /*
   it('should execute transaction via model', async () => {
