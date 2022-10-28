@@ -1,4 +1,4 @@
-import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type MutationObject, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder } from 'kysely';
+import { type SelectType, type Updateable, type InsertObject, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type MutationObject, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder, JoinReferenceExpression } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
@@ -532,7 +532,7 @@ export default function model<
       return this.deleteOne(this.id, id);
     }
 
-    static findByIdAndIncrement(
+    static findByIdAndIncrementQuery(
       id: Id, 
       columns: Partial<Record<keyof Table, number>>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
@@ -551,8 +551,15 @@ export default function model<
         .set(setData)
         .where(this.ref(this.id), '=', id)
         .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
-        .returningAll()
-        .executeTakeFirst();
+        .returningAll();
+    }
+
+    static findByIdAndIncrement(
+      id: Id, 
+      columns: Partial<Record<keyof Table, number>>,
+      func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
+    ) {
+      return this.findByIdAndIncrementQuery(id, columns, func).executeTakeFirst();
     }
 
     static getByIdAndIncrement(
@@ -561,22 +568,7 @@ export default function model<
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      const setData: Updateable<InsertObject<DB, TableName>> = {};
-
-      Object.keys(columns).forEach((column) => {
-        const value = columns[column as keyof Table] as number;
-        const correctColumn = column as keyof Updateable<InsertObject<DB, TableName>>;
-
-        setData[correctColumn] = sql`${this.ref(column as string)} + ${value}` as any;
-      });
-
-      return this
-        .updateTable()
-        .set(setData)
-        .where(this.ref(this.id), '=', id)
-        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
-        .returningAll()
-        .executeTakeFirstOrThrow(error);
+      return this.findByIdAndIncrementQuery(id, columns, func).executeTakeFirstOrThrow(error);
     }
 
     static relatedQuery<
@@ -584,23 +576,18 @@ export default function model<
       FromColumnName extends keyof DB[TableName] & string,
       ToTableName extends keyof DB & string,
       ToColumnName extends keyof DB[ToTableName] & string,
-    >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>) {
+    >(relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, ids: Id | Id[] = []) {
       const { from, to } = relation;
-      const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
+      const [fromTable] = from.split('.') as [FromTableName, FromColumnName];
       const [toTable] = to.split('.') as [ToTableName, ToColumnName];
 
-      // const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
+      const idsArray = Array.isArray(ids) ? ids : [ids];
 
-      // @ts-ignore
-      const ids = models.map((model) => model[fromColumn]);
-
-      return this
-        .db
+      return this.db
         .selectFrom(fromTable)
-        // @ts-ignore
-        .innerJoin(toTable, to, from)
-        // @ts-ignore
-        .where(from, 'in', ids)
+        .innerJoin(toTable, (jb) => jb.on(this.ref(from), '=', this.ref(to)))
+        .where(this.ref(from), 'in', idsArray)
+        .if(!idsArray.length, (qb) => qb.where(this.ref(from), 'in', idsArray))
         .selectAll(toTable);
     }
 
@@ -622,10 +609,8 @@ export default function model<
       return this
         .db
         .selectFrom(fromTable)
-        // @ts-ignore
-        .innerJoin(toTable, to, from)
-        // @ts-ignore
-        .where(from, 'in', ids)
+        .innerJoin(toTable, (jb) => jb.on(this.ref(from), '=', this.ref(to)))
+        .where(this.ref(from), 'in', ids)
         .selectAll(toTable)
         .execute();
     }
