@@ -28,6 +28,22 @@ enum SortKey {
   FOLLOWERS_COUNT = 'FOLLOWERS_COUNT',
 }
 
+class Comment extends applyMixins(db, 'comments', 'id')(
+  (base) => updatedAt<DB, 'comments', 'id', typeof base>(base, 'updatedAt'),
+  (base) => globalId<DB, 'comments', 'id', typeof base>(base, Number),
+  (base) => cursorable<DB, 'comments', 'id', typeof base>(base, {
+    sortKeys: {
+      [SortKey.CREATED_AT]: [
+        ['createdAt', 'ASC', true], 
+        ['id', 'ASC']
+      ],
+    },
+    max: 100,
+    limit: 10,
+  }),
+) {
+}
+
 class Quiz extends applyMixins(db, 'quizzes', 'id')(
   (base) => updatedAt<DB, 'quizzes', 'id', typeof base>(base, 'updatedAt'),
   (base) => globalId<DB, 'quizzes', 'id', typeof base>(base, Number),
@@ -43,13 +59,6 @@ class Quiz extends applyMixins(db, 'quizzes', 'id')(
   }),
 ) {
 }
-
-/*
-const quiz = await Quiz.getById(1);
-quiz.id;
-//quiz.sss;
-quiz.reactionStatistics;
-*/
 
 
 class User extends applyMixins(db, 'users', 'id')(
@@ -84,8 +93,8 @@ class User extends applyMixins(db, 'users', 'id')(
 ) {
 
   static relations = {
-    comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
-    comments2: this.relation(RelationType.HasManyRelation, 'users.id', 'comments.userId'),
+    comment: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
+    comments: this.relation(RelationType.HasManyRelation, 'users.id', 'comments.userId'),
   };
 
   static findByEmail(email: string) {
@@ -131,118 +140,7 @@ class User extends applyMixins(db, 'users', 'id')(
 
     return this.with('comments', (db) => db.selectFrom('comments').where('id', '=', 1)).selectFrom('users').execute();
   }
-
-  get item() {
-    return 1;
-  }
-
-  get i() {
-    return 'ddd';
-  }
 }
-
-/*
-const models = {
-  User,
-  User2: User,
-};
-
-const isolatedModels = isolate(models);
-isolatedModels.User.testttt();
-models.User.testttt();
-
-const result4 = await User.getById(1);
-
-const testData = await User.findOne('id', 1);
-
-const fields = {
-  id: 1,
-  test: 2,
-  email: 'sss',
-  updatedAt: '2020-01-01',
-};
-const testData2 = await User.findByFields(fields);
-
-fields.test = 1;
-
-const result = await isolatedModels.User.getById(1);
-console.log('result', result);
-isolatedModels.User.findByEmail('ssss');
-isolatedModels.User.findByEmail(12);
-isolatedModels.User.findByEmail('12');
-isolatedModels.User.findByGlobalId(12);
-isolatedModels.User.findByGlobalId('3333');
-
-const userGlobalId = isolatedModels.User.getGlobalId(result4);
-console.log(userGlobalId);
-
-const user2 = await User.getById('dddd');
-User.findByEmail(12);
-User.findByEmail('12');
-User.findByGlobalId(12);
-User.findByGlobalId('3333');
-
-const item = await User.findBySlug('ffff');
-user2.updatedAt;
-user2.updatedAt2;
-
-isolatedModels.User.getLocalId(12);
-isolatedModels.User.getLocalId('12');
-
-*/
-
-
-/*
-class User extends applyMixins(
-  db, 'users', 'id',
-  db.model('users', 'id', NoResultError),
-  updatedAt<DB, 'users', 'id'>('updatedAt'),
-  globalId<DB, 'users', 'id'>(),
- ) {
-  static relations = {
-    comments: this.relation(RelationType.HasOneRelation, 'users.id', 'comments.userId'),
-    comments2: this.relation(RelationType.HasManyRelation, 'users.id', 'comments.userId'),
-  };
-
-  static findByEmail(email: string) {
-    return this.findOne('email', email);
-  }
-
-  static updateByEmail(email: string, data: Partial<Users>) {
-    return this.updateTable().where('email', '=', email).set(data).execute();
-  }
-
-  static testttt() {
-    return this.db.selectFrom('users').innerJoin('comments', 'users.id', 'comments.userId').execute();
-
-  }
-
-  get item() {
-    return 1;
-  }
-
-  get i() {
-    return 'ddd';
-  }
-}
-*/
-
-/*
-const user = new User({
-  email: 'test@gmail.com',
-  id: 234,
-  updatedAt: 'test',
-  // additional: 234,
-});
-
-
-
-user.email;
-user.item;
-user.i;
-
-
-*/
 
 describe('transactions', () => {
   beforeAll(async () => {
@@ -365,40 +263,78 @@ describe('transactions', () => {
     });
 
     expect(db.isTransaction).toBe(false);
+  });
 
-/*
-    const comments = await User.relatedQuery([row], User.relations.comments).limit(2).execute();
-    console.log('last two comments', comments);
+  it('should execute related query', async () => {
+    const user = await User.getByEmail('test@gmail.com');
 
-    
-*/
-/*
-
-    const updatedRows = await User.findRelatedAndCombine([row], User.relations.comments2, 'comments2');
-    console.log('last two comments', updatedRows);
-*
-    /*
-    comments[0].userId;
-    comments[0].id;
+    const comment = await Comment.insert({
+      userId: user.id,
+      message: 'Test message',
+    });
 
     const comments2 = await User
-      .relatedQuery([row], User.relations.comments)
-      .where('users.id', '=', 7)
+      .relatedQuery(User.relations.comments, user.id)
       .execute();
 
-    */
+    expect(comments2.length).toBe(1);
+    expect(comments2[0].message).toBe(comment.message);
+  });
 
-    //const user = await User.findByEmail('liviatlumacova@gmail.com');
-    //console.log('user 2', user);
+  it('should execute find related query', async () => {
+    const user = await User.getByEmail('test@gmail.com');
 
-    //await User.fetchGraph([user], ['comments']);
-    // console.log('user with comments', user);
-/*
-    const [firstUser] = await User.findRelated([user], 'comments');
-    console.log('users comments', firstUser);
-    
-    firstUser.comments;
-    */
+    const comment = await Comment.insert({
+      userId: user.id,
+      message: 'Test message 2',
+    });
+
+    const comments = await User.findRelated(User.relations.comments, [user]);
+
+    expect(comments.length).toBe(2);
+    expect(comments[0].message).toBe('Test message');
+    expect(comments[1].message).toBe('Test message 2');
+  });
+
+  it('should execute find related and combine query', async () => {
+    const user = await User.getByEmail('test@gmail.com');
+
+    const [updatedUser] = await User.findRelatedAndCombine(User.relations.comments, [user], 'comments');
+
+    expect(updatedUser.comments.length).toBe(2);
+    expect(updatedUser.comments[0].message).toBe('Test message');
+    expect(updatedUser.comments[1].message).toBe('Test message 2');
+  });
+
+  it('should execute find related and combine query with correct number of comments and users', async () => {
+    const user = await User.getByEmail('test@gmail.com');
+    const user2 = await User.getByEmail('test-insert-only@gmail.com');
+
+    const comment3 = await Comment.insert({
+      userId: user2.id,
+      message: 'Test message 3',
+    });
+
+    const [updatedUser1, updatedUser2] = await User.findRelatedAndCombine(User.relations.comments, [user, user2], 'comments');
+
+    expect(updatedUser1.comments.length).toBe(2);
+    expect(updatedUser1.comments[0].message).toBe('Test message');
+    expect(updatedUser1.comments[1].message).toBe('Test message 2');
+
+    expect(updatedUser2.comments.length).toBe(1);
+    expect(updatedUser2.comments[0].message).toBe(comment3.message);
+  });
+
+  it('should not call afterCommit', async () => {
+    await User.transaction(async ({ afterCommit }) => {
+      afterCommit(async () => {
+        throw new Error('Should not be called');
+      });
+
+      throw new Error('Transaction rejected');
+    });
+
+   // expect.assertions(1);
   });
 /*
   it('should execute transaction via model', async () => {
@@ -434,17 +370,5 @@ describe('transactions', () => {
     expect(user1.email).toBe('zfedor@gmail.com');
   });
 
-  
-
-  it('should not call afterCommit', async () => {
-    await User.transaction(async ({ afterCommit }) => {
-      throw new Error('Transaction rejected');
-
-      console.log('user 1', user);
-    });
-
-    const user = await User.findByEmail('liviatlumacova@gmail.com');
-    console.log('user 2', user);
-  });
   */
 });

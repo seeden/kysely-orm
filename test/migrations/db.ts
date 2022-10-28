@@ -13,6 +13,18 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('followersCount', 'integer', (col) => col.unsigned().notNull().defaultTo(0))
     .execute()
 
+  await db.schema
+    .createTable('comments')
+    .addColumn('id', 'integer', (col) => col.autoIncrement().primaryKey())
+    .addColumn('message', 'varchar(255)')
+    .addColumn('userId', 'integer', (col) =>
+      col.references('users.id').onDelete('cascade').notNull()
+    )
+    .addColumn('createdAt', 'datetime', (col) => col.notNull().defaultTo('CURRENT_TIMESTAMP'))
+    .addColumn('updatedAt', 'datetime', (col) => col.notNull().defaultTo('CURRENT_TIMESTAMP'))
+    .addColumn('count', 'integer', (col) => col.unsigned().notNull().defaultTo(0))
+    .execute()
+
     /*
   await db.schema
     .createTable('pet')
@@ -33,6 +45,6 @@ export async function up(db: Kysely<any>): Promise<void> {
 }
 
 export async function down(db: Kysely<any>): Promise<void> {
-  await db.schema.dropTable('users').execute()
-  // await db.schema.dropTable('person').execute()
+  await db.schema.dropTable('comments').execute();
+  await db.schema.dropTable('users').execute();
 }

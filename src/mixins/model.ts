@@ -596,12 +596,10 @@ export default function model<
       FromColumnName extends keyof DB[TableName] & string,
       ToTableName extends keyof DB & string,
       ToColumnName extends keyof DB[ToTableName] & string,
-    >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>) {
+    >(relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, models: Data[]) {
       const { from, to } = relation;
       const [fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];
       const [toTable] = to.split('.') as [ToTableName, ToColumnName];
-
-      // const oneResult = type === RelationType.HasOneRelation || type === RelationType.BelongsToOneRelation;
 
       // @ts-ignore
       const ids = models.map((model) => model[fromColumn]);
@@ -621,18 +619,18 @@ export default function model<
       ToTableName extends keyof DB & string,
       ToColumnName extends keyof DB[ToTableName] & string,
       Field extends string,
-    >(models: Data[], relation: OneRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<Data & {
-      [key in Field]: Selectable<DB[ToTableName]>;
-    }[]>;
+    >(relation: OneRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, models: Data[], field: Field): Promise<(Data & {
+      [key in Field]: Selectable<DB[ToTableName]> | undefined;
+    })[]>;
     static async findRelatedAndCombine<
       FromTableName extends TableName,
       FromColumnName extends keyof DB[TableName] & string,
       ToTableName extends keyof DB & string,
       ToColumnName extends keyof DB[ToTableName] & string,
       Field extends string,
-    >(models: Data[], relation: ManyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<Data & {
+    >(relation: ManyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, models: Data[], field: Field): Promise<(Data & {
       [key in Field]: Selectable<DB[ToTableName]>[];
-    }>;
+    })[]>;
 
     static async findRelatedAndCombine<
       FromTableName extends TableName,
@@ -640,8 +638,8 @@ export default function model<
       ToTableName extends keyof DB & string,
       ToColumnName extends keyof DB[ToTableName] & string,
       Field extends string,
-    >(models: Data[], relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, field: Field): Promise<any> {
-      const rows = await this.findRelated(models, relation);
+    >(relation: AnyRelation<DB, FromTableName, FromColumnName, ToTableName, ToColumnName>, models: Data[], field: Field): Promise<any> {
+      const rows = await this.findRelated(relation, models);
 
       const { type, from, to } = relation;
       const [_fromTable, fromColumn] = from.split('.') as [FromTableName, FromColumnName];

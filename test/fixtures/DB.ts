@@ -27,10 +27,12 @@ export interface Users {
 }
 
 export interface Comments {
-  id: number;
-  updatedAt: string;
+  id: Generated<number>;
+  message: string;
+  createdAt: Generated<number>;
+  updatedAt: Generated<string>;
   userId: number;
-  count: number;
+  count: Generated<number>;
 }
 
 export interface Quizzes {
