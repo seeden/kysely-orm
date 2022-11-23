@@ -3,11 +3,11 @@ import { type Model } from './model';
 
 type ParseCallback<IdType> = (id: string) => IdType;
 
-function base64(i: string): string {
+function encodeBase64(i: string): string {
   return Buffer.from(i, 'utf8').toString('base64');
 }
 
-function unbase64(i: string): string {
+function decodeBase64(i: string): string {
   return Buffer.from(i, 'base64').toString('utf8');
 }
 
@@ -15,20 +15,30 @@ function fromGlobalId<IdType>(globalId: string, parse: ParseCallback<IdType>): {
   type: string;
   id: ReturnType<typeof parse>;
 } {
-  const unbasedGlobalId = unbase64(globalId);
-  const delimiterPos = unbasedGlobalId.indexOf(':');
+  const unbasedGlobalId = decodeBase64(globalId);
+  const [type, unparsedId] = unbasedGlobalId.split(':');
 
-  const type = unbasedGlobalId.substring(0, delimiterPos);
-  const id = parse(unbasedGlobalId.substring(delimiterPos + 1));
-
-  if (!type || !id) {
+  if (!type || !unparsedId) {
     throw new Error('Node type or id is not defined in globalId');
   }
+
+  const id = parse(unparsedId);
 
   return {
     type,
     id,
   };
+}
+
+export function decodeTypeFromGlobalId(globalId: string) {
+  const unbasedGlobalId = decodeBase64(globalId);
+  const [type] = unbasedGlobalId.split(':');
+
+  if (!type) {
+    throw new Error('Node type is not defined in globalId');
+  }
+
+  return type;
 }
 
 export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Model<DB, TableName, IdColumnName>>(
@@ -41,7 +51,7 @@ export default function globalId<DB, TableName extends keyof DB & string, IdColu
   return class GlobalId extends Base {
     static getGlobalId(id: SelectType<DB[TableName][IdColumnName]>): string {
       if (typeof id === 'string' || typeof id === 'number') {
-        return base64([this.table, id.toString()].join(':'));
+        return encodeBase64([this.table, id.toString()].join(':'));
       }
       
       throw new Error('Id is not defined');
