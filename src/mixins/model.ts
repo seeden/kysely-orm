@@ -126,13 +126,15 @@ export default function model<
 
     static async find<ColumnName extends keyof Table & string>(
       column: ColumnName,
-      values: Readonly<SelectType<Table[ColumnName]>[]>,
+      values: Readonly<SelectType<Table[ColumnName]>[]> | Readonly<SelectType<Table[ColumnName]>>,
       func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
     ) {
+      const isArray = Array.isArray(values);
+
       return this
         .selectFrom()
         .selectAll()
-        .where(this.ref(column as string), 'in', values)
+        .where(this.ref(column as string), isArray ? 'in' : '=', values)
         .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .execute();
     }
@@ -163,11 +165,8 @@ export default function model<
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
-            if (Array.isArray(value)) {
-              currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
-            } else {
-              currentQuery = currentQuery.where(this.ref(column as string), '=', value);
-            }
+            const isArray = Array.isArray(value);
+            currentQuery = currentQuery.where(this.ref(column as string), isArray ? 'in' : '=', value);
           }
           return currentQuery;
         })
@@ -187,11 +186,8 @@ export default function model<
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
-            if (Array.isArray(value)) {
-              currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
-            } else {
-              currentQuery = currentQuery.where(this.ref(column as string), '=', value);
-            }
+            const isArray = Array.isArray(value);
+            currentQuery = currentQuery.where(this.ref(column as string), isArray ? 'in' : '=', value);
           }
           return currentQuery;
         })
@@ -211,11 +207,8 @@ export default function model<
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
-            if (Array.isArray(value)) {
-              currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
-            } else {
-              currentQuery = currentQuery.where(this.ref(column as string), '=', value);
-            }
+            const isArray = Array.isArray(value);
+            currentQuery = currentQuery.where(this.ref(column as string), isArray ? 'in' : '=', value);
           }
           return currentQuery;
         })

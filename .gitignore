@@ -4,3 +4,4 @@ dist
 .env
 package-lock.json
 .DS_Store
+./db.test
