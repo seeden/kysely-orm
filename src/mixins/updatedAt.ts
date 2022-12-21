@@ -11,7 +11,7 @@ export default function updatedAt<
   field: keyof DB[TableName] & string,
 ) {
   return class UpdatedAt extends Base  {
-    static async beforeUpdate(data: Updateable<InsertObject<DB, TableName>>) {
+    static async beforeUpdate(data: Readonly<Updateable<DB[TableName]>>) {
       return {
         ...await Base.beforeUpdate(data),
         [field]: sql`NOW()`,
