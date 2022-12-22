@@ -2,7 +2,7 @@ import { SqliteDialect, Migrator, FileMigrationProvider } from 'kysely';
 import SQLLiteDatabase from 'better-sqlite3';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Database, RelationType, applyMixins, updatedAt, globalId, slug, cursorable } from '../src';
+import { Database, RelationType, applyMixins, updatedAt, globalId, slug, cursorable, isolate } from '../src';
 import DB, { Users } from './fixtures/DB';
 
 const dialect = new SqliteDialect({
@@ -141,6 +141,113 @@ class User extends applyMixins(db, 'users', 'id')(
     return this.with('comments', (db) => db.selectFrom('comments').where('id', '=', 1)).selectFrom('users').execute();
   }
 }
+
+describe('db isolation', () => {
+  const isolatedDb = new Database<DB>({
+    dialect,
+    debug: true,
+    isolated: true,
+  });
+
+  class NonIsolatedUser extends applyMixins(isolatedDb, 'users', 'id')() {}
+
+  beforeAll(async () => {
+    await migrator.migrateToLatest();
+  });
+
+  beforeEach(async () => {
+    const [IsolatedUser] = isolate([NonIsolatedUser]);
+    await IsolatedUser.deleteOneByFields({
+      email: 'test@gmail.com',
+    });
+  });
+
+  it('should have a correct isolated by default', async () => {
+    expect(isolatedDb.isolated).toBe(true);
+    expect(NonIsolatedUser.isolated).toBe(false);
+  });
+
+  it('should throw when you try to use isolated db', async () => {
+    await expect(async () => {
+      await NonIsolatedUser.insert({
+        email: 'test@gmail.com',
+        name: 'Tester',
+        password: 'myPassword',
+      });
+   }).rejects.toThrowError("Cannot use insertInto() in not isolated model. Call isolate({ Model }) first.");
+
+    await expect(async () => {
+       await NonIsolatedUser.getById(1);
+    }).rejects.toThrowError("Cannot use selectFrom() in not isolated model. Call isolate({ Model }) first.");
+  });
+
+  it('should be able to isolate model', async () => {
+    const [IsolatedUser] = isolate([NonIsolatedUser]);
+
+    // isolated model should work
+    const user = await IsolatedUser.insert({
+      email: 'test@gmail.com',
+      name: 'Tester',
+      username: 'tester',
+      password: 'myPassword',
+    });
+
+    await IsolatedUser.getById(user.id);
+
+    // non isolated model should still throw
+    await expect(async () => {
+      await NonIsolatedUser.getById(1);
+    }).rejects.toThrowError("Cannot use selectFrom() in not isolated model. Call isolate({ Model }) first.");
+  });
+
+  it('should be able to isolate model as object', async () => {
+    const { NonIsolatedUser: IsolatedUser} = isolate({ NonIsolatedUser });
+
+    // isolated model should work
+    const user = await IsolatedUser.insert({
+      email: 'test@gmail.com',
+      name: 'Tester',
+      username: 'tester',
+      password: 'myPassword',
+    });
+
+    await IsolatedUser.getById(user.id);
+
+    // non isolated model should still throw
+    await expect(async () => {
+      await NonIsolatedUser.getById(1);
+    }).rejects.toThrowError("Cannot use selectFrom() in not isolated model. Call isolate({ Model }) first.");
+  });
+
+  it('should allow extend and copy isolated value', async () => {
+    const [IsolatedUser] = isolate([NonIsolatedUser]);
+    class DoubleIsolated extends IsolatedUser {}
+
+    // isolated model should work
+    const user = await DoubleIsolated.insert({
+      email: 'test@gmail.com',
+      name: 'Tester',
+      username: 'tester',
+      password: 'myPassword',
+    });
+
+    await DoubleIsolated.getById(user.id);
+
+    // non isolated model should still throw
+    await expect(async () => {
+      await NonIsolatedUser.getById(1);
+    }).rejects.toThrowError("Cannot use selectFrom() in not isolated model. Call isolate({ Model }) first.");
+
+
+    DoubleIsolated.isolated = false;
+    await expect(async () => {
+      await DoubleIsolated.getById(1);
+    }).rejects.toThrowError("Cannot use selectFrom() in not isolated model. Call isolate({ Model }) first.");
+
+    // isolated model should work
+    await IsolatedUser.getById(user.id);
+  });
+});
 
 describe('transactions', () => {
   beforeAll(async () => {

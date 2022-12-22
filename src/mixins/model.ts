@@ -35,6 +35,7 @@ export default function model<
     static readonly table: TableName = table;
     static readonly id: IdColumnName = id;
     static readonly noResultError: typeof NoResultError = noResultError;
+    static isolated: boolean = false;
 
     // constructor(data: Data);
     constructor(...args: any[]) {
@@ -124,18 +125,30 @@ export default function model<
     }
 
     static selectFrom() {
+      if (this.db.isolated && !this.isolated) {
+        throw new Error('Cannot use selectFrom() in not isolated model. Call isolate({ Model }) first.');
+      }
       return this.db.selectFrom(this.table);
     }
 
     static updateTable() {
+      if (this.db.isolated && !this.isolated) {
+        throw new Error('Cannot use updateTable() in not isolated model. Call isolate({ Model }) first.');
+      }
       return this.db.updateTable(this.table);
     }
 
     static insertInto() {
+      if (this.db.isolated && !this.isolated) {
+        throw new Error('Cannot use insertInto() in not isolated model. Call isolate({ Model }) first.');
+      }
       return this.db.insertInto(this.table);
     }
 
     static deleteFrom() {
+      if (this.db.isolated && !this.isolated) {
+        throw new Error('Cannot use deleteFrom() in not isolated model. Call isolate({ Model }) first.');
+      }
       return this.db.deleteFrom(this.table);
     }
 

@@ -1,14 +1,25 @@
 import Constructor from '../@types/Constructor';
 
-export default function isolate<Models extends Record<string, Constructor<any>>>(models: Models): Models {
-  const keys: (keyof Models)[] = Object.keys(models);
-  const isolatedModels = <Models>{};
+type IsolatedConstructor = Constructor<any> & { isolated: boolean };
 
-  for (const key of keys) {
-    const model = models[key];
-
-    isolatedModels[key] = class IsolatedModel extends model {};
+export default function isolate<Models extends IsolatedConstructor[] | Record<string, IsolatedConstructor>>(models: Models): Models {
+  if (Array.isArray(models)) {
+    return models.map((model) => {
+      class IsolatedModel extends model {};
+      
+      IsolatedModel.isolated = true;
+      return IsolatedModel;
+    }) as Models;
   }
 
-  return isolatedModels;
+  const isolatedModels: Record<string, IsolatedConstructor> = {};
+  Object.keys(models).forEach((key) => {
+    const model = models[key];
+    class IsolatedModel extends model {};
+    
+    IsolatedModel.isolated = true;
+    isolatedModels[key] = IsolatedModel;
+  });
+
+  return isolatedModels as Models;
 }
