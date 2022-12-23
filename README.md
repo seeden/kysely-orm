@@ -800,3 +800,10 @@ class Model {
   }
 }
 ```
+
+### Best practices and coments and answer
+ - Do not import models into your mixins. It will breaks isolation if you use it and throw errors
+ - Models are not available from Database object because you can not ask for it from database object. It will breaks isolation, types and whole encapsulation.
+ - Why not to use functions instead of classes? We need to bind db, table and id for all functions. If we use functions we will reinvent wheel.
+ - When typescript fixed max limit issue we can use instance for each data row
+

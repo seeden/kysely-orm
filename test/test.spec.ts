@@ -149,7 +149,16 @@ describe('db isolation', () => {
     isolated: true,
   });
 
-  class NonIsolatedUser extends applyMixins(isolatedDb, 'users', 'id')() {}
+  class NonIsolatedUser extends applyMixins(isolatedDb, 'users', 'id')() {
+    
+    static getIsolated2() {
+      return this.isolated;
+    }
+
+    static getIsolated = () => {
+      return this.isolated;
+    }
+  }
 
   beforeAll(async () => {
     await migrator.migrateToLatest();
@@ -165,6 +174,8 @@ describe('db isolation', () => {
   it('should have a correct isolated by default', async () => {
     expect(isolatedDb.isolated).toBe(true);
     expect(NonIsolatedUser.isolated).toBe(false);
+
+    expect(NonIsolatedUser.getIsolated2()).toBe(false);
   });
 
   it('should throw when you try to use isolated db', async () => {
@@ -183,6 +194,11 @@ describe('db isolation', () => {
 
   it('should be able to isolate model', async () => {
     const [IsolatedUser] = isolate([NonIsolatedUser]);
+
+    expect(IsolatedUser.isolated).toBe(true);
+
+    expect(IsolatedUser.getIsolated2()).toBe(true);
+    expect(NonIsolatedUser.getIsolated2()).toBe(false);
 
     // isolated model should work
     const user = await IsolatedUser.insert({

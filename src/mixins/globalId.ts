@@ -44,14 +44,16 @@ export function decodeTypeFromGlobalId(globalId: string) {
 export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Model<DB, TableName, IdColumnName>>(
   Base: TBase,
   parseId: ParseCallback<SelectType<DB[TableName][IdColumnName]>>,
+  type?: string,
 ) {
   type Table = DB[TableName];
-  type Data = Selectable<Table>;
   
   return class GlobalId extends Base {
+    static readonly globalIdType = type || Base.table;
+
     static getGlobalId(id: SelectType<DB[TableName][IdColumnName]>): string {
       if (typeof id === 'string' || typeof id === 'number') {
-        return encodeBase64([this.table, id.toString()].join(':'));
+        return encodeBase64([this.globalIdType, id.toString()].join(':'));
       }
       
       throw new Error('Id is not defined');
@@ -60,8 +62,8 @@ export default function globalId<DB, TableName extends keyof DB & string, IdColu
     static getLocalId(globalId: string) {
       const { type, id } = fromGlobalId(globalId, parseId);
 
-      if (this.table !== type) {
-        throw new Error(`Model ${this.table} is not model ${type}`);
+      if (this.globalIdType !== type) {
+        throw new Error(`Model ${this.globalIdType} is not model ${type}`);
       }
 
       return id;
