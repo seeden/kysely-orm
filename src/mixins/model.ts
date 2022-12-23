@@ -21,15 +21,6 @@ export default function model<
   type Data = Selectable<Table>;
   type Id = Readonly<SelectType<IdColumn>>;
 
-  function getIds(data?: (Data & Table) | Table[]) {
-    if (!data) return [];
-
-    if (Array.isArray(data)) {
-      return data.map((item) => item[id]);
-    }
-
-    return [data[id]];
-  }
   return class Model {
     static readonly db: Database<DB> = db;
     static readonly table: TableName = table;
@@ -652,13 +643,10 @@ export default function model<
       const [fromTable] = from.split('.') as [FromTableName, FromColumnName];
       const [toTable] = to.split('.') as [ToTableName, ToColumnName];
 
-      const idsArray = Array.isArray(ids) ? ids : [ids];
-
       return this.db
         .selectFrom(fromTable)
         .innerJoin(toTable, (jb) => jb.on(this.ref(from), '=', this.ref(to)))
-        .where(this.ref(from), 'in', idsArray)
-        .if(!idsArray.length, (qb) => qb.where(this.ref(from), 'in', idsArray))
+        .where(this.ref(`${fromTable}.${this.id}`), Array.isArray(ids) ? 'in' : '=', ids)
         .selectAll(toTable);
     }
 
