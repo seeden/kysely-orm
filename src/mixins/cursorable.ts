@@ -259,7 +259,7 @@ export default function cursorable<
           const { count } = await this
             .selectFrom()
             .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
-            .select(sql`count(${this.ref(`${this.table}.${this.id}`)})`.as('count'))
+            .select(sql`count(${sql.literal(`${this.table}.${this.id}`)})`.as('count'))
             .executeTakeFirstOrThrow(this.noResultError);
 
           return Number(count);
