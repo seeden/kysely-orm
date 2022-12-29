@@ -645,7 +645,7 @@ export default function model<
 
       return this.db
         .selectFrom(fromTable)
-        .innerJoin(toTable, (jb) => jb.on(this.ref(from), '=', this.ref(to)))
+        .innerJoin(toTable, (jb) => jb.onRef(this.ref(from), '=', this.ref(to)))
         .where(this.ref(`${fromTable}.${this.id}`), Array.isArray(ids) ? 'in' : '=', ids)
         .selectAll(toTable);
     }
@@ -747,7 +747,7 @@ export default function model<
       return this
         .db
         .selectFrom(fromTable)
-        .innerJoin(toTable, (jb) => jb.on(this.ref(from), '=', this.ref(to)))
+        .innerJoin(toTable, (jb) => jb.onRef(this.ref(from), '=', this.ref(to)))
         .where(this.ref(from), 'in', ids)
         .selectAll(toTable)
         .execute();
