@@ -169,6 +169,93 @@ export default function applyMixins<
     T8,
     T9,
     T10,
+    T11,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+    mixin4: (base: T3) => T4,
+    mixin5: (base: T4) => T5,
+    mixin6: (base: T5) => T6,
+    mixin7: (base: T6) => T7,
+    mixin8: (base: T7) => T8,
+    mixin9: (base: T8) => T9,
+    mixin10: (base: T9) => T10,
+    mixin11: (base: T10) => T11,
+  ): T11;
+
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+    T8,
+    T9,
+    T10,
+    T11,
+    T12,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+    mixin4: (base: T3) => T4,
+    mixin5: (base: T4) => T5,
+    mixin6: (base: T5) => T6,
+    mixin7: (base: T6) => T7,
+    mixin8: (base: T7) => T8,
+    mixin9: (base: T8) => T9,
+    mixin10: (base: T9) => T10,
+    mixin11: (base: T10) => T11,
+    mixin12: (base: T11) => T12,
+  ): T12;
+
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+    T8,
+    T9,
+    T10,
+    T11,
+    T12,
+    T13,
+  >(
+    mixin1: (base: Model<DB, TableName, IdColumnName>) => T1,
+    mixin2: (base: T1) => T2,
+    mixin3: (base: T2) => T3,
+    mixin4: (base: T3) => T4,
+    mixin5: (base: T4) => T5,
+    mixin6: (base: T5) => T6,
+    mixin7: (base: T6) => T7,
+    mixin8: (base: T7) => T8,
+    mixin9: (base: T8) => T9,
+    mixin10: (base: T9) => T10,
+    mixin11: (base: T10) => T11,
+    mixin12: (base: T11) => T12,
+    mixin13: (base: T12) => T13,
+  ): T13;
+
+  function process<
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+    T8,
+    T9,
+    T10,
+    T11,
+    T12,
+    T13,
   >(
     mixin1?: (base: Model<DB, TableName, IdColumnName>) => T1, 
     mixin2?: (base: T1) => T2,
@@ -180,6 +267,9 @@ export default function applyMixins<
     mixin8?: (base: T7) => T8,
     mixin9?: (base: T8) => T9,
     mixin10?: (base: T9) => T10,
+    mixin11?: (base: T10) => T11,
+    mixin12?: (base: T11) => T12,
+    mixin13?: (base: T12) => T13,
   ) {
     if (!mixin1) {
       return BaseClass;
@@ -221,7 +311,19 @@ export default function applyMixins<
       return mixin9(mixin8(mixin7(mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass)))))))));
     }
 
-    return mixin10(mixin9(mixin8(mixin7(mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass))))))))));
+    if (!mixin11) {
+      return mixin10(mixin9(mixin8(mixin7(mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass))))))))));
+    }
+
+    if (!mixin12) {
+      return mixin11(mixin10(mixin9(mixin8(mixin7(mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass)))))))))));
+    }
+
+    if (!mixin13) {
+      return mixin12(mixin11(mixin10(mixin9(mixin8(mixin7(mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass))))))))))));
+    }
+
+    return mixin13(mixin12(mixin11(mixin10(mixin9(mixin8(mixin7(mixin6(mixin5(mixin4(mixin3(mixin2(mixin1(BaseClass)))))))))))));
   }
 
   return process;
