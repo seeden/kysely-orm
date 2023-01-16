@@ -598,7 +598,7 @@ export default function model<
         const value = columns[column as keyof Table] as number;
         const correctColumn = column as keyof Updateable<Table>;
 
-        setData[correctColumn] = sql`${this.ref(column as string)} + ${value}` as any;
+        setData[correctColumn] = sql`${sql.ref(column as string)} + ${value}` as any;
       });
 
       return this
@@ -811,16 +811,16 @@ export default function model<
       const [[key, value], ...rest] = entries;
 
       let update: RawBuilder<string> = sql`jsonb_set(
-        COALESCE(${this.ref(column)}, '{}'), 
+        COALESCE(${sql.ref(column)}, '{}'), 
         ${sql.literal(`{${key}}`)}, 
-        (COALESCE(${this.ref(column)}->>${sql.literal(key)}, '0')::int + ${value})::text::jsonb
+        (COALESCE(${sql.ref(column)}->>${sql.literal(key)}, '0')::int + ${value})::text::jsonb
       )`;
 
       rest.forEach(([key, value]) => {
         update = sql`jsonb_set(
           ${update}, 
           ${sql.literal(`{${key}}`)}, 
-          (COALESCE(${this.ref(column)}->>${sql.literal(key)}, '0')::int + ${value})::text::jsonb
+          (COALESCE(${sql.ref(column)}->>${sql.literal(key)}, '0')::int + ${value})::text::jsonb
         )`;
       });
     
