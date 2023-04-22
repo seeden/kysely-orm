@@ -1,5 +1,6 @@
-import { type SelectType, type Updateable, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type MutationObject, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder, JoinReferenceExpression } from 'kysely';
+import { type SelectType, type Updateable, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder, JoinReferenceExpression } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
+import { type UpdateExpression } from 'kysely/dist/cjs/parser/update-set-parser';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
 import type ReferenceExpression from '../@types/ReferenceExpression';
@@ -158,7 +159,7 @@ export default function model<
         .selectFrom()
         .selectAll()
         .where(this.ref(column as string), isArray ? 'in' : '=', values)
-        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .execute();
     }
 
@@ -171,7 +172,7 @@ export default function model<
         .selectFrom()
         .selectAll()
         .where(this.ref(column as string), '=', value)
-        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .limit(1)
         .executeTakeFirst();
     }
@@ -193,7 +194,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .execute();
     }
 
@@ -214,7 +215,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .executeTakeFirst();
     }
 
@@ -236,7 +237,7 @@ export default function model<
           return currentQuery;
         })
         .selectAll()
-        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .executeTakeFirstOrThrow(error);
     }
 
@@ -264,7 +265,7 @@ export default function model<
         .selectFrom()
         .selectAll()
         .where(this.ref(column as string), '=', value)
-        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .limit(1)
         .executeTakeFirstOrThrow(error);
 
@@ -292,7 +293,7 @@ export default function model<
         // @ts-ignore
         .set(processedData)
         .where(this.ref(column as string), '=', value)
-        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
 
@@ -327,7 +328,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .execute();
 
@@ -360,7 +361,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
 
@@ -397,7 +398,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
 
@@ -427,7 +428,7 @@ export default function model<
         // @ts-ignore
         .set(processedData)
         .where(this.ref(column as string), '=', value)
-        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
 
@@ -479,7 +480,7 @@ export default function model<
 
     static async upsert(
       values: Insertable<Table>,
-      upsertValues: MutationObject<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
+      upsertValues: UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
       error: typeof NoResultError = this.noResultError,
     ) {
@@ -503,6 +504,7 @@ export default function model<
 
     static async insertIfNotExists(
       values: Insertable<Table>,
+      sameColumn: keyof DB[TableName] & string,
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
       error: typeof NoResultError = this.noResultError,
     ) {
@@ -514,8 +516,8 @@ export default function model<
         .onConflict((oc) => oc
           .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
           .doUpdateSet({
-            [id]: (eb: any) => eb.ref(`excluded.${id}`)
-          } as MutationObject<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>) as OnConflictUpdateBuilder<DB, TableName>
+            [sameColumn]: (eb: any) => eb.ref(`excluded.${sameColumn}`)
+          } as UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>) as OnConflictUpdateBuilder<DB, TableName>
         )
         .returningAll()
         .executeTakeFirstOrThrow(error);
@@ -535,7 +537,7 @@ export default function model<
       const { numDeletedRows } = await this
         .deleteFrom()
         .where(this.ref(column as string), '=', value)
-        .if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
         .executeTakeFirstOrThrow(error);
 
       return numDeletedRows;
@@ -562,7 +564,7 @@ export default function model<
           }
           return currentQuery;
         })
-        .if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
         .executeTakeFirstOrThrow(error);
       
       return numDeletedRows;
@@ -577,7 +579,7 @@ export default function model<
       const { numDeletedRows } = await this
         .deleteFrom()
         .where(this.ref(column as string), 'in', values)
-        .if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
         .executeTakeFirstOrThrow(error);
 
       return numDeletedRows;
@@ -606,7 +608,7 @@ export default function model<
         // @ts-ignore
         .set(setData)
         .where(this.ref(this.id), '=', id)
-        .if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll();
     }
 
@@ -812,15 +814,15 @@ export default function model<
 
       let update: RawBuilder<string> = sql`jsonb_set(
         COALESCE(${sql.ref(column)}, '{}'), 
-        ${sql.literal(`{${key}}`)}, 
-        (COALESCE(${sql.ref(column)}->>${sql.literal(key)}, '0')::int + ${value})::text::jsonb
+        ${sql.lit(`{${key}}`)}, 
+        (COALESCE(${sql.ref(column)}->>${sql.lit(key)}, '0')::int + ${value})::text::jsonb
       )`;
 
       rest.forEach(([key, value]) => {
         update = sql`jsonb_set(
           ${update}, 
-          ${sql.literal(`{${key}}`)}, 
-          (COALESCE(${sql.ref(column)}->>${sql.literal(key)}, '0')::int + ${value})::text::jsonb
+          ${sql.lit(`{${key}}`)}, 
+          (COALESCE(${sql.ref(column)}->>${sql.lit(key)}, '0')::int + ${value})::text::jsonb
         )`;
       });
     

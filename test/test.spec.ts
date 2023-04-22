@@ -34,8 +34,9 @@ class Comment extends applyMixins(db, 'comments', 'id')(
   (base) => cursorable<DB, 'comments', 'id', typeof base>(base, {
     sortKeys: {
       [SortKey.CREATED_AT]: [
-        ['createdAt', 'ASC', true], 
-        ['id', 'ASC']
+        ['createdAt', { direction: 'ASC', reversible: true, timestamp: true }], 
+        ['updatedAt', { direction: 'ASC', reversible: true, timestamp: true }],
+        ['id', { direction: 'DESC', reversible: true }]
       ],
     },
     max: 100,
@@ -50,8 +51,8 @@ class Quiz extends applyMixins(db, 'quizzes', 'id')(
   (base) => cursorable<DB, 'quizzes', 'id', typeof base>(base, {
     sortKeys: {
       [SortKey.CREATED_AT]: [
-        ['createdAt', 'ASC', true], 
-        ['id', 'ASC']
+        ['createdAt', { direction: 'ASC', reversible: true, timestamp: true }], 
+        ['id', { direction: 'DESC', reversible: true }]
       ],
     },
     max: 100,
@@ -67,13 +68,13 @@ class User extends applyMixins(db, 'users', 'id')(
   (base) => cursorable<DB, 'users', 'id', typeof base>(base, {
     sortKeys: {
       [SortKey.CREATED_AT]: [
-        ['createdAt', 'ASC', true], 
-        ['id', 'ASC']
+        ['createdAt', { direction: 'ASC', reversible: true, timestamp: true }], 
+        ['id', { direction: 'DESC', reversible: true }]
       ],
       [SortKey.FOLLOWERS_COUNT]: [
-        ['followersCount', 'DESC', true], 
-        ['createdAt', 'ASC'],
-        ['id', 'ASC'],
+        ['followersCount', { direction: 'DESC', reversible: true }], 
+        ['createdAt', { direction: 'ASC', reversible: true, timestamp: true }],
+        ['id', { direction: 'DESC', reversible: true }],
       ],
     },
     max: 100,
@@ -337,17 +338,19 @@ describe('transactions', () => {
       email: 'test-insert-only@gmail.com',
       name: 'Tester Before Insert Only',
       password: 'myPassword',
-    }, 'email');
+    }, 'email', 'email');
 
     expect(user.name).toBe('Tester Before Insert Only');
+    expect(user.email).toBe('test-insert-only@gmail.com');
 
     const updatedUser = await User.insertIfNotExists({
       email: 'test-insert-only@gmail.com',
       name: 'Tester After Insert Only',
       password: 'myPassword',
-    }, 'email');
+    }, 'email', 'email');
 
     expect(updatedUser.name).toBe('Tester Before Insert Only');
+    expect(updatedUser.email).toBe('test-insert-only@gmail.com');
   });
 
   it('should execute transaction via db', async () => {
@@ -520,6 +523,32 @@ describe('transactions', () => {
     expect(user1).toBeDefined();
     expect(user1.email).toBe('zfedor@gmail.com');
   });
-
   */
+});
+
+
+describe('curosrs', () => {
+  it('should execute cursorable quest', async () => {
+    const user = await User.getByEmail('test@gmail.com');
+/*
+    const comment = await Comment.insert({
+      userId: user.id,
+      message: 'Test message',
+    });
+
+          [SortKey.CREATED_AT]: [
+        ['createdAt', { direction: 'ASC', reversible: true, timestamp: true }], 
+        ['updatedAt', { direction: 'ASC', reversible: true, timestamp: true }],
+        ['id', { direction: 'DESC', reversible: true }]
+      ],
+    */
+
+    const data = await Comment.getCursorableConnection({
+      sortKey: SortKey.CREATED_AT,
+      // before: 'WyIyMDIzLTA0LTIyIDIwOjEwOjU0IiwiMjAyMy0wNC0yMiAyMDoxMDo1NCIsNTNd',
+      
+    });
+
+    console.log(data.edges);
+  });
 });

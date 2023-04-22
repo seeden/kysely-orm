@@ -7,8 +7,8 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('email', 'varchar(255)', (col) => col.unique())
     .addColumn('name', 'varchar(255)')
     .addColumn('password', 'varchar(255)')
-    .addColumn('createdAt', 'datetime', (col) => col.notNull().defaultTo('CURRENT_TIMESTAMP'))
-    .addColumn('updatedAt', 'datetime', (col) => col.notNull().defaultTo('CURRENT_TIMESTAMP'))
+    .addColumn('createdAt', 'datetime', (col) => col.notNull().defaultTo('NOW()'))
+    .addColumn('updatedAt', 'datetime', (col) => col.notNull().defaultTo('NOW()'))
     .addColumn('username', 'varchar(255)', (col) => col.notNull())
     .addColumn('followersCount', 'integer', (col) => col.unsigned().notNull().defaultTo(0))
     .execute()
@@ -20,8 +20,8 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('userId', 'integer', (col) =>
       col.references('users.id').onDelete('cascade').notNull()
     )
-    .addColumn('createdAt', 'datetime', (col) => col.notNull().defaultTo('CURRENT_TIMESTAMP'))
-    .addColumn('updatedAt', 'datetime', (col) => col.notNull().defaultTo('CURRENT_TIMESTAMP'))
+    .addColumn('createdAt', 'datetime', (col) => col.notNull().defaultTo('NOW()'))
+    .addColumn('updatedAt', 'datetime', (col) => col.notNull().defaultTo('NOW()'))
     .addColumn('count', 'integer', (col) => col.unsigned().notNull().defaultTo(0))
     .execute()
 

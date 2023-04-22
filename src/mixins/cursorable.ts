@@ -1,7 +1,14 @@
-import { type SelectQueryBuilder, sql, Selectable } from 'kysely';
+import { type SelectQueryBuilder, sql, type Selectable } from 'kysely';
 import { type Model } from './model';
 
-type ColumnSort<Table> = [keyof Table & string, 'ASC' | 'DESC', boolean?];
+type ColumnSortOptions = { 
+  direction?: 'ASC' | 'DESC';
+  reversible?: boolean;
+  timestamp?: boolean;
+  modifier?: string;
+};
+
+type ColumnSort<Table> = [keyof Table & string, ColumnSortOptions];
 type SortKeys<Table> = Record<string, ColumnSort<Table>[]>;
 
 type Config<Table, TSortKeys extends SortKeys<Table>> = {
@@ -26,9 +33,10 @@ export default function cursorable<
 
   type CursorPart = {
     column: keyof Table & string;
-    direction: 'ASC' | 'DESC';
-    reversable?: boolean;
     value: any;
+    direction: 'ASC' | 'DESC';
+    reversible: boolean;
+    modifier?: string;
   };
 
   type CursorableOptions = {
@@ -71,11 +79,12 @@ export default function cursorable<
       throw new Error('Invalid cursor');
     }
 
-    return sortKeyConfig.map(([column, direction, reversable = false], index) => ({
+    return sortKeyConfig.map(([column, { direction = 'ASC', reversible = false, timestamp = false, modifier }], index) => ({
       column,
-      direction,
-      reversable,
       value: values[index],
+      direction,
+      reversible,
+      modifier: modifier ?? timestamp ? 'timestamp(3)' : '',
     }));
   }
 
@@ -116,19 +125,19 @@ export default function cursorable<
   }
 
   function getEqualOperator(cursorPart: CursorPart, isReversed?: boolean) {
-    const { direction, reversable } = cursorPart;
+    const { direction, reversible } = cursorPart;
 
-    if (isReversed && reversable) {
+    if (isReversed && reversible) {
       return direction === 'ASC' ? sql`<` : sql`>`;
     }
 
     return direction === 'ASC' ? sql`>` : sql`<`;
   }
 
-  function getDirection(direction: 'ASC' | 'DESC', reversable?: boolean, isReversed?: boolean) {
+  function getDirection(direction: 'ASC' | 'DESC' = 'ASC' , reversible: boolean = false, isReversed: boolean = false) {
     const sqlDirection = direction.toLowerCase() as 'asc' | 'desc'
 
-    if (isReversed && reversable) {
+    if (isReversed && reversible) {
       return sqlDirection === 'asc' ? 'desc' : 'asc';
     }
 
@@ -159,35 +168,49 @@ export default function cursorable<
       let query = this
         .selectFrom()
         .limit(limit + (oneMore ? 1 : 0))
-        .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, any>) as unknown as typeof qb)
-        .if(!!cursor, (qb) => qb.where((qb) => {
+        .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, any>) as unknown as typeof qb)
+        .$if(!!cursor, (qbIf) => qbIf.where(({ ref, or, and, cmpr }) => {
           const [first, ...rest] = parseCursor(sortKey, cursor);
 
-          const returnQb = qb.where(this.ref(`${this.table}.${first.column}`), getEqualOperator(first, isReversed), first.value);
+          const prepareColumnFromCursorPart = (cursorPart: CursorPart) => {
+            const { column, modifier } = cursorPart;
+    
+            const columnRef = sql.ref(`${this.table}.${column}`);
+    
+            if (modifier && this.db.isPostgres) {
+              return sql`${(columnRef)}::${sql.raw(modifier)}`;
+            }
+      
+            return columnRef;
+          }
 
-          const processCursorParts = (innerQb: typeof qb, restCursorParts: typeof rest, previousCursorPart: typeof first): typeof qb => {
+          const startExpression = cmpr(prepareColumnFromCursorPart(first), getEqualOperator(first, isReversed), first.value);
+
+          const processCursorParts = (expression: typeof startExpression, restCursorParts: typeof rest, previousCursorPart: typeof first): typeof startExpression => {
             if (!restCursorParts.length) {
-              return innerQb;
+              return expression;
             }
 
-            return innerQb.orWhere((qb2) => {
-              const [nextCursorPart, ...nextRestCursorParts] = restCursorParts;
+            const [nextCursorPart, ...nextRestCursorParts] = restCursorParts;
 
-              return qb2
-                .where(this.ref(`${this.table}.${previousCursorPart.column}`), '=', previousCursorPart.value)
-                .where((qb3) => {
-                  const subInnerQb = qb3.where(this.ref(`${this.table}.${nextCursorPart.column}`), getEqualOperator(nextCursorPart, isReversed), nextCursorPart.value)
-
-                  return processCursorParts(subInnerQb, nextRestCursorParts, nextCursorPart);
-                });
-            });
+            return or([
+              expression,
+              and([
+                cmpr(prepareColumnFromCursorPart(previousCursorPart), '=', previousCursorPart.value),
+                processCursorParts(
+                  cmpr(prepareColumnFromCursorPart(nextCursorPart), getEqualOperator(nextCursorPart, isReversed), nextCursorPart.value),
+                  nextRestCursorParts,
+                  nextCursorPart,
+                ),
+              ]),
+            ]);
           };
 
-          return processCursorParts(returnQb, rest, first);
+          return processCursorParts(startExpression, rest, first);
         }));
 
-      sortKeyConfig.forEach(([column, direction, reversable]) => {
-        query = query.orderBy(this.ref(`${this.table}.${column}`), getDirection(direction, reversable, isReversed));
+      sortKeyConfig.forEach(([column, { direction, reversible }]) => {
+        query = query.orderBy(this.ref(`${this.table}.${column}`), getDirection(direction, reversible, isReversed));
       });
 
       return query;
@@ -258,8 +281,8 @@ export default function cursorable<
 
           const { count } = await this
             .selectFrom()
-            .if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
-            .select(sql`count(${sql.literal(`${this.table}.${this.id}`)})`.as('count'))
+            .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
+            .select(sql`count(${sql.lit(`${this.table}.${this.id}`)})`.as('count'))
             .executeTakeFirstOrThrow(this.noResultError);
 
           return Number(count);
