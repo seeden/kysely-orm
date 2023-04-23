@@ -61,7 +61,6 @@ class Quiz extends applyMixins(db, 'quizzes', 'id')(
 ) {
 }
 
-
 class User extends applyMixins(db, 'users', 'id')(
   (base) => updatedAt<DB, 'users', 'id', typeof base>(base, 'updatedAt'),
   (base) => globalId<DB, 'users', 'id', typeof base>(base, Number),
@@ -527,7 +526,7 @@ describe('transactions', () => {
 });
 
 
-describe('curosrs', () => {
+describe('cursors', () => {
   it('should execute cursorable quest', async () => {
     const user = await User.getByEmail('test@gmail.com');
 /*
@@ -545,7 +544,7 @@ describe('curosrs', () => {
 
     const data = await Comment.getCursorableConnection({
       sortKey: SortKey.CREATED_AT,
-      // before: 'WyIyMDIzLTA0LTIyIDIwOjEwOjU0IiwiMjAyMy0wNC0yMiAyMDoxMDo1NCIsNTNd',
+      after: 'WyIyMDIzLTA0LTIyIDIwOjEwOjU0IiwiMjAyMy0wNC0yMiAyMDoxMDo1NCIsNTNd',
       
     });
 

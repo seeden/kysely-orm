@@ -37,6 +37,7 @@ export default function cursorable<
     direction: 'ASC' | 'DESC';
     reversible: boolean;
     modifier?: string;
+    timestamp?: boolean;
   };
 
   type CursorableOptions = {
@@ -84,7 +85,8 @@ export default function cursorable<
       value: values[index],
       direction,
       reversible,
-      modifier: modifier ?? timestamp ? 'timestamp(3)' : '',
+      modifier,
+      timestamp,
     }));
   }
 
@@ -173,12 +175,16 @@ export default function cursorable<
           const [first, ...rest] = parseCursor(sortKey, cursor);
 
           const prepareColumnFromCursorPart = (cursorPart: CursorPart) => {
-            const { column, modifier } = cursorPart;
+            const { column, modifier, timestamp } = cursorPart;
     
             const columnRef = sql.ref(`${this.table}.${column}`);
     
             if (modifier && this.db.isPostgres) {
               return sql`${(columnRef)}::${sql.raw(modifier)}`;
+            }
+
+            if (timestamp && this.db.isPostgres) {
+              return sql`date_trunc('milliseconds', ${(columnRef)})`;
             }
       
             return columnRef;
