@@ -183,7 +183,7 @@ export default function cursorable<
               return sql`${(columnRef)}::${sql.raw(modifier)}`;
             }
 
-            if (timestamp && this.db.isPostgres) {
+            if (timestamp && this.db.isPostgres) { // PG is truncating microseconds
               return sql`date_trunc('milliseconds', ${(columnRef)})`;
             }
       
