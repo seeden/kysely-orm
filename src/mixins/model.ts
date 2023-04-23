@@ -158,7 +158,7 @@ export default function model<
       return this
         .selectFrom()
         .selectAll()
-        .where(this.ref(column as string), isArray ? 'in' : '=', values)
+        .where(this.ref(`${this.table}.${column}`), isArray ? 'in' : '=', values)
         .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .execute();
     }
@@ -171,7 +171,7 @@ export default function model<
       return this
         .selectFrom()
         .selectAll()
-        .where(this.ref(column as string), '=', value)
+        .where(this.ref(`${this.table}.${column}`), '=', value)
         .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .limit(1)
         .executeTakeFirst();
@@ -190,7 +190,7 @@ export default function model<
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
             const isArray = Array.isArray(value);
-            currentQuery = currentQuery.where(this.ref(column as string), isArray ? 'in' : '=', value);
+            currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), isArray ? 'in' : '=', value);
           }
           return currentQuery;
         })
@@ -211,7 +211,7 @@ export default function model<
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
             const isArray = Array.isArray(value);
-            currentQuery = currentQuery.where(this.ref(column as string), isArray ? 'in' : '=', value);
+            currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), isArray ? 'in' : '=', value);
           }
           return currentQuery;
         })
@@ -232,7 +232,7 @@ export default function model<
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
             const isArray = Array.isArray(value);
-            currentQuery = currentQuery.where(this.ref(column as string), isArray ? 'in' : '=', value);
+            currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), isArray ? 'in' : '=', value);
           }
           return currentQuery;
         })
@@ -264,7 +264,7 @@ export default function model<
       const item = await this
         .selectFrom()
         .selectAll()
-        .where(this.ref(column as string), '=', value)
+        .where(this.ref(`${this.table}.${column}`), '=', value)
         .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
         .limit(1)
         .executeTakeFirstOrThrow(error);
@@ -292,7 +292,7 @@ export default function model<
         .updateTable()
         // @ts-ignore
         .set(processedData)
-        .where(this.ref(column as string), '=', value)
+        .where(this.ref(`${this.table}.${column}`), '=', value)
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
@@ -321,9 +321,9 @@ export default function model<
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
             if (Array.isArray(value)) {
-              currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+              currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), 'in', value);
             } else {
-              currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+              currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), '=', value);
             }
           }
           return currentQuery;
@@ -354,9 +354,9 @@ export default function model<
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
             if (Array.isArray(value)) {
-              currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+              currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), 'in', value);
             } else {
-              currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+              currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), '=', value);
             }
           }
           return currentQuery;
@@ -391,9 +391,9 @@ export default function model<
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
             if (Array.isArray(value)) {
-              currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+              currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), 'in', value);
             } else {
-              currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+              currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), '=', value);
             }
           }
           return currentQuery;
@@ -427,7 +427,7 @@ export default function model<
         .updateTable()
         // @ts-ignore
         .set(processedData)
-        .where(this.ref(column as string), '=', value)
+        .where(this.ref(`${this.table}.${column}`), '=', value)
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
@@ -451,7 +451,7 @@ export default function model<
     ) {
       return this
         .selectFrom()
-        .where(this.ref(column as string), '=', value)
+        .where(this.ref(`${this.table}.${column}`), '=', value)
         .selectAll()
         .forUpdate()
         .executeTakeFirst();
@@ -536,7 +536,7 @@ export default function model<
     ) {
       const { numDeletedRows } = await this
         .deleteFrom()
-        .where(this.ref(column as string), '=', value)
+        .where(this.ref(`${this.table}.${column}`), '=', value)
         .$if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
         .executeTakeFirstOrThrow(error);
 
@@ -557,9 +557,9 @@ export default function model<
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
             if (Array.isArray(value)) {
-              currentQuery = currentQuery.where(this.ref(column as string), 'in', value);
+              currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), 'in', value);
             } else {
-              currentQuery = currentQuery.where(this.ref(column as string), '=', value);
+              currentQuery = currentQuery.where(this.ref(`${this.table}.${column}`), '=', value);
             }
           }
           return currentQuery;
@@ -578,7 +578,7 @@ export default function model<
     ) {
       const { numDeletedRows } = await this
         .deleteFrom()
-        .where(this.ref(column as string), 'in', values)
+        .where(this.ref(`${this.table}.${column}`), 'in', values)
         .$if(!!func, (qb) => func?.(qb as unknown as DeleteQueryBuilder<DB, TableName, DeleteResult>) as unknown as typeof qb)
         .executeTakeFirstOrThrow(error);
 
@@ -600,7 +600,7 @@ export default function model<
         const value = columns[column as keyof Table] as number;
         const correctColumn = column as keyof Updateable<Table>;
 
-        setData[correctColumn] = sql`${sql.ref(column as string)} + ${value}` as any;
+        setData[correctColumn] = sql`${sql.ref(`${this.table}.${column}`)} + ${value}` as any;
       });
 
       return this
@@ -813,16 +813,16 @@ export default function model<
       const [[key, value], ...rest] = entries;
 
       let update: RawBuilder<string> = sql`jsonb_set(
-        COALESCE(${sql.ref(column)}, '{}'), 
+        COALESCE(${sql.ref(`${this.table}.${column}`)}, '{}'), 
         ${sql.lit(`{${key}}`)}, 
-        (COALESCE(${sql.ref(column)}->>${sql.lit(key)}, '0')::int + ${value})::text::jsonb
+        (COALESCE(${sql.ref(`${this.table}.${column}`)}->>${sql.lit(key)}, '0')::int + ${value})::text::jsonb
       )`;
 
       rest.forEach(([key, value]) => {
         update = sql`jsonb_set(
           ${update}, 
           ${sql.lit(`{${key}}`)}, 
-          (COALESCE(${sql.ref(column)}->>${sql.lit(key)}, '0')::int + ${value})::text::jsonb
+          (COALESCE(${sql.ref(`${this.table}.${column}`)}->>${sql.lit(key)}, '0')::int + ${value})::text::jsonb
         )`;
       });
     
