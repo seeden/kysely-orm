@@ -1,4 +1,15 @@
-export { NoResultError, sql, type Selectable, type Insertable, type Updateable, type SelectQueryBuilder } from 'kysely';
+export { 
+  NoResultError, 
+  sql, 
+  type Selectable, 
+  type Insertable, 
+  type Updateable, 
+  type SelectQueryBuilder,
+  // reexport dialects
+  PostgresDialect,
+  MysqlDialect,
+  SqliteDialect,
+} from 'kysely';
 
 export { default as Database } from './Database';
 

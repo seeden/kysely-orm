@@ -1,6 +1,5 @@
-import { Kysely, PostgresDialect, CamelCasePlugin, NoResultError, type LogEvent, type Dialect, SqliteAdapter } from 'kysely';
+import { Kysely, CamelCasePlugin, NoResultError, type LogEvent, type Dialect, SqliteDialect, MysqlDialect, PostgresDialect } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
-import { Pool } from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import model from './mixins/model';
 
@@ -8,13 +7,8 @@ export type DatabaseConfig<DB> = {
   isolated?: boolean;
   log?: (event: LogEvent) => void;
   debug?: boolean;
-} & ({
-  connectionString: string;
-} | {
   dialect: Dialect;
-} | {
-  kysely: Kysely<DB>;
-});
+};
 
 type AfterCommitCallback = () => Promise<any>;
 
@@ -32,6 +26,7 @@ type TransactionResponse<DB> = {
 export type TransactionCallback<DB, Type> = (trx: TransactionResponse<DB>) => Promise<Type>;
 
 export default class Database<DB> {
+  private dialect: Dialect;
   private kysely: Kysely<DB>;
   private asyncLocalDb = new AsyncLocalStorage<TransactionState<DB>>();
   readonly isolated;
@@ -41,50 +36,41 @@ export default class Database<DB> {
   static readonly HasManyRelation = 1;
 
   constructor(config: DatabaseConfig<DB>) {
-    this.isolated = config.isolated ?? false;
-    this.log = config.log;
-    this.debug = config.debug ?? false;
+    const { dialect, isolated = false, log, debug = false } = config;
 
-    if ('kysely' in config) {
-      this.kysely = config.kysely;
-    } else {
-      const dialect = ('dialect' in config)
-        ? config.dialect
-        : new PostgresDialect({
-          pool: new Pool({
-            connectionString: config.connectionString,
-          }),
-        });
+    this.isolated = isolated;
+    this.log = log;
+    this.debug = debug;
+    this.dialect = dialect;
 
-      this.kysely = new Kysely<DB>({
-        dialect,
-        plugins: [
-          new CamelCasePlugin(),
-        ],
-        log: (event) => {
-          if (this.debug) {
-            if (event.level === 'query') {
-              console.log(event?.query?.sql)
-              console.log(event?.query?.parameters)
-            }
+    this.kysely = new Kysely<DB>({
+      dialect,
+      plugins: [
+        new CamelCasePlugin(),
+      ],
+      log: (event) => {
+        if (this.debug) {
+          if (event.level === 'query') {
+            console.log(event?.query?.sql)
+            console.log(event?.query?.parameters)
           }
+        }
 
-          this.log?.(event);
-        },
-      });  
-    }
-  }
-
-  get adapter() {
-    return this.kysely.getExecutor().adapter;
+        this.log?.(event);
+      },
+    });  
   }
 
   get isSqlite() {
-    return this.adapter instanceof SqliteAdapter;
+    return this.dialect instanceof SqliteDialect;
+  }
+
+  get isMysql() {
+    return this.dialect instanceof MysqlDialect;
   }
 
   get isPostgres() {
-    return this.adapter instanceof PostgresDialect;
+    return this.dialect instanceof PostgresDialect;
   }
 
   model<
