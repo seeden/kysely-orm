@@ -1,6 +1,6 @@
 {
   "name": "kysely-orm",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "description": "Type safe ORM for kysely",
   "repository": {
     "type": "git",
