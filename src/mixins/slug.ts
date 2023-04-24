@@ -138,13 +138,21 @@ export default function slug<
     
       if (firstRow) {
         const lastSlug = firstRow[field] as unknown as string;
-        const number = lastSlug?.substring(0, shorterSlug.length);
-        const nextNumber = number ? Number(number) + 1 : 2;
-        if (nextNumber.toString().length > 10) {
+        const number = lastSlug?.substring(shorterSlug.length);
+        try {
+          const nextNumber = number ? Number.parseInt(number) + 1 : 2;
+          if (isNaN(nextNumber)) {
+            throw new Error(`Invalid number: ${number}`);
+          }
+
+          if (nextNumber.toString().length > 10) {
+            throw new Error(`Number is too long: ${nextNumber}`);
+          }
+  
+          return `${shorterSlug}${nextNumber}`;
+        } catch (e) {
           return puid.generate();
         }
-
-        return `${shorterSlug}${nextNumber}`;
       }
     
       return `${shorterSlug}2`;
