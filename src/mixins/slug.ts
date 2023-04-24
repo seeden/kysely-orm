@@ -1,4 +1,4 @@
-import { sql, SqliteAdapter, type Insertable } from 'kysely';
+import { sql, type Insertable } from 'kysely';
 import urlSlug from 'url-slug';
 // @ts-ignore
 import Puid from 'puid';
@@ -13,18 +13,20 @@ export enum Operation {
   CONCAT,
 }
 
+type SlugOptions = {
+  separator?: string;
+  truncate?: number;
+  dictionary?: { [key: string]: string };
+};
+
 type Options<DB, TableName extends keyof DB> = {
   field: keyof DB[TableName] & string;
   sources: (keyof DB[TableName] & string)[];
   operation?: Operation;
-  slugOptions?: {
-    separator?: string;
-    truncate?: number;
-    dictionary?: { [key:string]: string };
-  };
+  slugOptions?: SlugOptions;
 };
 
-function generate<DB, TableName extends keyof DB>(data: Data, options: Options<DB, TableName>): string | undefined {
+function generateSlugValue<DB, TableName extends keyof DB>(data: Data, options: Options<DB, TableName>): string | undefined {
   const { 
     sources, 
     operation = Operation.GRAB_FIRST,
@@ -101,16 +103,16 @@ export default function slug<
       return this
         .selectFrom()
         .selectAll()
-        .where(this.ref(column), '=', value)
+        .where(this.ref(`${this.table}.${column}`), '=', value)
         .limit(1)
         .executeTakeFirst();
     }
 
     static async generateSlug(data: Insertable<Table>): Promise<string> {
-      const { field } = options;
+      const { field, slugOptions: { truncate = 50 } = {} } = options;
     
       // generate slug
-      const slug = generate(data, options) ?? puid.generate();
+      const slug = generateSlugValue(data, options) ?? puid.generate();
     
       // check if slug is already taken
       const rowWithSlug = await this.findBySlug(slug, field);
@@ -121,25 +123,31 @@ export default function slug<
       const operator = this.db.isSqlite ? 'like' : '~';
 
       // TODO add lock by bigint (hashed slug)
+
+      const shorterSlug = slug.substring(0, Math.max(0, truncate - 10));
     
       // generate new slug
       const firstRow = await this
         .selectFrom()
-        .where(this.ref(field), operator, `^${slug}[0-9]*$`)
-        .orderBy(sql`length(${sql.ref(field)})`, 'desc')
-        .orderBy(this.ref(field), 'desc')
-        .select(this.ref(field))
+        .where(this.ref(`${this.table}.${field}`), operator, `^${shorterSlug}[0-9]*$`)
+        .orderBy(sql`length(${sql.ref(`${this.table}.${field}`)})`, 'desc')
+        .orderBy(this.ref(`${this.table}.${field}`), 'desc')
+        .select(this.ref(`${this.table}.${field}`))
         .limit(1)
         .executeTakeFirst();
     
       if (firstRow) {
         const lastSlug = firstRow[field] as unknown as string;
-        const number = lastSlug?.substr(slug.length);
+        const number = lastSlug?.substring(0, shorterSlug.length);
         const nextNumber = number ? Number(number) + 1 : 2;
-        return `${slug}${nextNumber}`;
+        if (nextNumber.toString().length > 10) {
+          return puid.generate();
+        }
+
+        return `${shorterSlug}${nextNumber}`;
       }
     
-      return `${slug}2`;
+      return `${shorterSlug}2`;
     }
   }
 }
