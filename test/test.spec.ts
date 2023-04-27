@@ -79,7 +79,7 @@ class User extends applyMixins(db, 'users', 'id')(
     max: 100,
     limit: 10,
   }),
-  (base) => slug<DB, 'users', 'id', typeof base>()(base, {
+  (base) => slug<DB, 'users', 'id', typeof base>(base)({
     field: 'username',
     sources: ['name'],
     slugOptions: {

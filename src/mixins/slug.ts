@@ -85,8 +85,8 @@ export default function slug<
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
   TBase extends Model<DB, TableName, IdColumnName>,
->() {
-  return <TOptions extends Options<DB, TableName>>(Base: TBase,options: TOptions) => {
+>(Base: TBase) {
+  return <TOptions extends Options<DB, TableName>>(options: TOptions) => {
     const { field } = options;
 
     type Table = DB[TableName];
