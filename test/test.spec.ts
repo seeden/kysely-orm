@@ -79,7 +79,7 @@ class User extends applyMixins(db, 'users', 'id')(
     max: 100,
     limit: 10,
   }),
-  (base) => slug<DB, 'users', 'id', typeof base>(base, {
+  (base) => slug<DB, 'users', 'id', typeof base>()(base, {
     field: 'username',
     sources: ['name'],
     slugOptions: {
@@ -111,7 +111,6 @@ class User extends applyMixins(db, 'users', 'id')(
 
   static testttt() {
     return this.db.selectFrom('users').innerJoin('comments', 'users.id', 'comments.userId').if(!!1, (qb) => qb.where('id', '=', 2)).execute();
-
   }
 
   static async widthExample() {
@@ -206,6 +205,7 @@ describe('db isolation', () => {
       name: 'Tester',
       username: 'tester',
       password: 'myPassword',
+
     });
 
     await IsolatedUser.getById(user.id);
@@ -544,8 +544,7 @@ describe('cursors', () => {
 
     const data = await Comment.getCursorableConnection({
       sortKey: SortKey.CREATED_AT,
-      after: 'WyIyMDIzLTA0LTIyIDIwOjEwOjU0IiwiMjAyMy0wNC0yMiAyMDoxMDo1NCIsNTNd',
-      
+      after: 'WyIyMDIzLTA0LTIyIDIwOjEwOjU0IiwiMjAyMy0wNC0yMiAyMDoxMDo1NCIsNTNd', 
     });
 
     console.log(data.edges);

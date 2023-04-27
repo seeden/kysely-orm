@@ -41,7 +41,12 @@ export function decodeTypeFromGlobalId(globalId: string) {
   return type;
 }
 
-export default function globalId<DB, TableName extends keyof DB & string, IdColumnName extends keyof DB[TableName] & string, TBase extends Model<DB, TableName, IdColumnName>>(
+export default function globalId<
+  DB, 
+  TableName extends keyof DB & string, 
+  IdColumnName extends keyof DB[TableName] & string, 
+  TBase extends Model<DB, TableName, IdColumnName>
+>(
   Base: TBase,
   parseId: ParseCallback<SelectType<DB[TableName][IdColumnName]>>,
   type?: string,

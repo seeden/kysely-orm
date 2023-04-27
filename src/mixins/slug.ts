@@ -79,83 +79,125 @@ function generateSlugValue<DB, TableName extends keyof DB>(data: Data, options: 
   return slug;
 }
 
+
 export default function slug<
   DB, 
   TableName extends keyof DB & string, 
   IdColumnName extends keyof DB[TableName] & string, 
   TBase extends Model<DB, TableName, IdColumnName>,
->(
-  Base: TBase,
-  options: Options<DB, TableName>,
-) {
-  type Table = DB[TableName];
-  return class Slug extends Base {
-    static async beforeInsert(data: Insertable<Table>) {
-      const { field } = options;
+>() {
+  return <TOptions extends Options<DB, TableName>>(Base: TBase,options: TOptions) => {
+    const { field } = options;
 
-      return {
-        ...await Base.beforeInsert(data),
-        [field]: await this.generateSlug(data),
-      };
-    }
+    type Table = DB[TableName];
+    type TableWithoutSlug = Omit<Table, TOptions['field']>;
 
-    static async findBySlug(value: string, column: keyof Table & string = options.field) {
-      return this
-        .selectFrom()
-        .selectAll()
-        .where(this.ref(`${this.table}.${column}`), '=', value)
-        .limit(1)
-        .executeTakeFirst();
-    }
-
-    static async generateSlug(data: Insertable<Table>): Promise<string> {
-      const { field, slugOptions: { truncate = 50 } = {} } = options;
-    
-      // generate slug
-      const slug = generateSlugValue(data, options) ?? puid.generate();
-    
-      // check if slug is already taken
-      const rowWithSlug = await this.findBySlug(slug, field);
-      if (!rowWithSlug) {
-        return slug;
-      }
-
-      const operator = this.db.isSqlite ? 'like' : '~';
-
-      // TODO add lock by bigint (hashed slug)
-
-      const shorterSlug = slug.substring(0, Math.max(0, truncate - 10));
-    
-      // generate new slug
-      const firstRow = await this
-        .selectFrom()
-        .where(this.ref(`${this.table}.${field}`), operator, `^${shorterSlug}[0-9]*$`)
-        .orderBy(sql`length(${sql.ref(`${this.table}.${field}`)})`, 'desc')
-        .orderBy(this.ref(`${this.table}.${field}`), 'desc')
-        .select(this.ref(`${this.table}.${field}`))
-        .limit(1)
-        .executeTakeFirst();
-    
-      if (firstRow) {
-        const lastSlug = firstRow[field] as unknown as string;
-        const number = lastSlug?.substring(shorterSlug.length);
-        try {
-          const nextNumber = number ? Number.parseInt(number) + 1 : 2;
-          if (isNaN(nextNumber)) {
-            throw new Error(`Invalid number: ${number}`);
-          }
-
-          if (nextNumber.toString().length > 10) {
-            throw new Error(`Number is too long: ${nextNumber}`);
-          }
-  
-          return `${shorterSlug}${nextNumber}`;
-        } catch (e) {
-          return puid.generate();
+    return class Slug extends Base {
+      static async insert(
+        values: Insertable<Table> | Insertable<TableWithoutSlug>,
+        error?: Parameters<typeof Base.insert>[1],
+      ) {
+        if (field in values) {
+          return Base.insert(values as Insertable<Table>, error);
         }
+
+        return Base.insert({
+          ...values,
+          [field]: await this.generateSlug(values as Insertable<TableWithoutSlug>),
+        } as Insertable<Table>, error);
       }
+
+      static async upsert(
+        values: Insertable<Table> | Insertable<TableWithoutSlug>,
+        upsertValues: Parameters<typeof Base.upsert>[1],
+        conflictColumns: Parameters<typeof Base.upsert>[2],
+        error?: Parameters<typeof Base.upsert>[3],
+      ) {
+        if (field in values) {
+          return Base.upsert(values as Insertable<Table>, upsertValues, conflictColumns, error);
+        }
+
+        return Base.upsert({
+          ...values,
+          [field]: await this.generateSlug(values as Insertable<TableWithoutSlug>),
+        } as Insertable<Table>, upsertValues, conflictColumns, error);
+      }
+
+
+      static async insertIfNotExists(
+        values: Insertable<Table> | Insertable<TableWithoutSlug>,
+        sameColumn: Parameters<typeof Base.insertIfNotExists>[1],
+        conflictColumns: Parameters<typeof Base.insertIfNotExists>[2],
+        error?: Parameters<typeof Base.insertIfNotExists>[3],
+      ) {
+        if (field in values) {
+          return Base.insertIfNotExists(values as Insertable<Table>, sameColumn, conflictColumns, error);
+        }
+
+        return Base.insertIfNotExists({
+          ...values,
+          [field]: await this.generateSlug(values as Insertable<TableWithoutSlug>),
+        } as Insertable<Table>, sameColumn, conflictColumns, error);
+      }
+
+      static async findBySlug(value: string, column: keyof Table & string = options.field) {
+        return this
+          .selectFrom()
+          .selectAll()
+          .where(this.ref(`${this.table}.${column}`), '=', value)
+          .limit(1)
+          .executeTakeFirst();
+      }
+
+      static async generateSlug(data: Insertable<TableWithoutSlug>): Promise<string> {
+        const { field, slugOptions: { truncate = 50 } = {} } = options;
+      
+        // generate slug
+        const slug = generateSlugValue(data, options) ?? puid.generate();
+      
+        // check if slug is already taken
+        const rowWithSlug = await this.findBySlug(slug, field);
+        if (!rowWithSlug) {
+          return slug;
+        }
+
+        const operator = this.db.isSqlite ? 'like' : '~';
+
+        // TODO add lock by bigint (hashed slug)
+
+        const shorterSlug = slug.substring(0, Math.max(0, truncate - 10));
+      
+        // generate new slug
+        const firstRow = await this
+          .selectFrom()
+          .where(this.ref(`${this.table}.${field}`), operator, `^${shorterSlug}[0-9]*$`)
+          .orderBy(sql`length(${sql.ref(`${this.table}.${field}`)})`, 'desc')
+          .orderBy(this.ref(`${this.table}.${field}`), 'desc')
+          .select(this.ref(`${this.table}.${field}`))
+          .limit(1)
+          .executeTakeFirst();
+      
+        if (firstRow) {
+          const lastSlug = firstRow[field] as unknown as string;
+          const number = lastSlug?.substring(shorterSlug.length);
+          try {
+            const nextNumber = number ? Number.parseInt(number) + 1 : 2;
+            if (isNaN(nextNumber)) {
+              throw new Error(`Invalid number: ${number}`);
+            }
+
+            if (nextNumber.toString().length > 10) {
+              throw new Error(`Number is too long: ${nextNumber}`);
+            }
     
-      return `${shorterSlug}2`;
+            return `${shorterSlug}${nextNumber}`;
+          } catch (e) {
+            return puid.generate();
+          }
+        }
+      
+        return `${shorterSlug}2`;
+      }
     }
   }
 }
