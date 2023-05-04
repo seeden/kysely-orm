@@ -98,10 +98,10 @@ export default function slug<
         error?: Parameters<typeof Base.insert>[1],
       ) {
         if (field in values) {
-          return Base.insert(values as Insertable<Table>, error);
+          return super.insert(values as Insertable<Table>, error);
         }
 
-        return Base.insert({
+        return super.insert({
           ...values,
           [field]: await this.generateSlug(values as Insertable<TableWithoutSlug>),
         } as Insertable<Table>, error);
@@ -114,10 +114,10 @@ export default function slug<
         error?: Parameters<typeof Base.upsert>[3],
       ) {
         if (field in values) {
-          return Base.upsert(values as Insertable<Table>, upsertValues, conflictColumns, error);
+          return super.upsert(values as Insertable<Table>, upsertValues, conflictColumns, error);
         }
 
-        return Base.upsert({
+        return super.upsert({
           ...values,
           [field]: await this.generateSlug(values as Insertable<TableWithoutSlug>),
         } as Insertable<Table>, upsertValues, conflictColumns, error);
@@ -131,10 +131,10 @@ export default function slug<
         error?: Parameters<typeof Base.insertIfNotExists>[3],
       ) {
         if (field in values) {
-          return Base.insertIfNotExists(values as Insertable<Table>, sameColumn, conflictColumns, error);
+          return super.insertIfNotExists(values as Insertable<Table>, sameColumn, conflictColumns, error);
         }
 
-        return Base.insertIfNotExists({
+        return super.insertIfNotExists({
           ...values,
           [field]: await this.generateSlug(values as Insertable<TableWithoutSlug>),
         } as Insertable<Table>, sameColumn, conflictColumns, error);

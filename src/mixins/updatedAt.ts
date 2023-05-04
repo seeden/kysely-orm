@@ -13,7 +13,7 @@ TBase extends Model<DB, TableName, IdColumnName>,
   return class UpdatedAt extends Base  {
     static async beforeUpdate(data: Readonly<Updateable<DB[TableName]>>) {
       return {
-        ...await Base.beforeUpdate(data),
+        ...await super.beforeUpdate(data),
         [field]: sql`NOW()`,
       };
     }
