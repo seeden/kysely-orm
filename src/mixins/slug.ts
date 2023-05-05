@@ -20,7 +20,7 @@ type SlugOptions = {
 };
 
 type Options<DB, TableName extends keyof DB> = {
-  field: keyof DB[TableName] & string;
+  field: keyof Insertable<DB[TableName]> & string;
   sources: (keyof DB[TableName] & string)[];
   operation?: Operation;
   slugOptions?: SlugOptions;
@@ -92,13 +92,17 @@ export default function slug<
     type Table = DB[TableName];
     type TableWithoutSlug = Omit<Table, TOptions['field']>;
 
+    function hasValidSlugField(field: keyof Insertable<Table> & string, values: Insertable<Table> | Insertable<TableWithoutSlug>): values is Insertable<Table> {
+      return field in values && (values as Insertable<Table>)[field] !== undefined;
+    }
+
     return class Slug extends Base {
       static async insert(
         values: Insertable<Table> | Insertable<TableWithoutSlug>,
         error?: Parameters<typeof Base.insert>[1],
       ) {
-        if (field in values) {
-          return super.insert(values as Insertable<Table>, error);
+        if (field in values && hasValidSlugField(field, values)) {
+          return super.insert(values, error);
         }
 
         return super.insert({
@@ -113,8 +117,8 @@ export default function slug<
         conflictColumns: Parameters<typeof Base.upsert>[2],
         error?: Parameters<typeof Base.upsert>[3],
       ) {
-        if (field in values) {
-          return super.upsert(values as Insertable<Table>, upsertValues, conflictColumns, error);
+        if (field in values && hasValidSlugField(field, values)) {
+          return super.upsert(values, upsertValues, conflictColumns, error);
         }
 
         return super.upsert({
@@ -130,8 +134,8 @@ export default function slug<
         conflictColumns: Parameters<typeof Base.insertIfNotExists>[2],
         error?: Parameters<typeof Base.insertIfNotExists>[3],
       ) {
-        if (field in values) {
-          return super.insertIfNotExists(values as Insertable<Table>, sameColumn, conflictColumns, error);
+        if (field in values && hasValidSlugField(field, values)) {
+          return super.insertIfNotExists(values, sameColumn, conflictColumns, error);
         }
 
         return super.insertIfNotExists({

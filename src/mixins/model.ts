@@ -82,13 +82,13 @@ export default function model<
     static async beforeInsert(data: Insertable<Table>) {
       return {
         ...data
-      } as Insertable<Table>;
+      };
     }
 
     static async beforeUpdate(data: Updateable<Table>) {
       return {
         ...data
-      } as Updateable<Table>;
+      };
     }
 
     static async afterInsert(_records: Data[]) {
