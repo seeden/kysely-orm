@@ -169,7 +169,7 @@ export default function slug<
 
         // TODO add lock by bigint (hashed slug)
 
-        const shorterSlug = slug.substring(0, Math.max(0, truncate - 10));
+        const shorterSlug = slug.substring(0, Math.max(0, truncate - 5));
       
         // generate new slug
         const firstRow = await this
