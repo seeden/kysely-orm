@@ -1,6 +1,6 @@
 {
   "name": "kysely-orm",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Type safe ORM for kysely",
   "repository": {
     "type": "git",
@@ -29,8 +29,7 @@
   },
   "author": "Zlatko Fedor <kysely-orm@zlatkofedor.com>",
   "license": "MIT",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.4",
     "@types/jest": "^29.5.1",
