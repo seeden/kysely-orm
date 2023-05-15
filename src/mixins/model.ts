@@ -1,6 +1,7 @@
-import { type SelectType, type Updateable, type Insertable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder, JoinReferenceExpression } from 'kysely';
+import { type SelectType, type Updateable, type Selectable, NoResultError, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import { type UpdateExpression } from 'kysely/dist/cjs/parser/update-set-parser';
+import { type InsertObjectOrList, type InsertObject } from 'kysely/dist/cjs/parser/insert-values-parser';
 import type Database from '../Database';
 import { type TransactionCallback } from '../Database';
 import type ReferenceExpression from '../@types/ReferenceExpression';
@@ -78,27 +79,6 @@ export default function model<
         to,
       };
     }
-  
-    static async beforeInsert(data: Insertable<Table>) {
-      return {
-        ...data
-      };
-    }
-
-    static async beforeUpdate(data: Updateable<Table>) {
-      return {
-        ...data
-      };
-    }
-
-    static async afterInsert(_records: Data[]) {
-    }
-
-    static async afterUpdate(_records: Data[]) {
-    }
-
-    static async afterUpsert(_records: Data[]) {
-    }
 
     static transaction<Type>(callback: TransactionCallback<DB, Type>) {
       return this.db.transaction(callback);
@@ -146,6 +126,16 @@ export default function model<
 
     static with<Name extends string, Expression extends CommonTableExpression<DB, Name>>(name: Name, expression: Expression) {
       return this.db.with(name, expression);
+    }
+
+    static processDataBeforeUpdate(data: UpdateExpression<DB, TableName, TableName>): UpdateExpression<DB, TableName, TableName>;
+    static processDataBeforeUpdate(data: UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>): UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>;
+    static processDataBeforeUpdate(data: UpdateExpression<DB, TableName, TableName> | UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>) {
+      return data;
+    }
+
+    static processDataBeforeInsert(data: InsertObjectOrList<DB, TableName>) {
+      return data;
     }
 
     static async find<ColumnName extends keyof Table & string>(
@@ -283,40 +273,33 @@ export default function model<
     static async findOneAndUpdate<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
-      data: Readonly<Updateable<Table>>,
+      data: UpdateExpression<DB, TableName, TableName>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
-      const processedData = await this.beforeUpdate(data);
-
-      const record = await this
+      const updatedData = this.processDataBeforeUpdate(data);
+      return await this
         .updateTable()
         // @ts-ignore
-        .set(processedData)
+        .set(updatedData)
         .where(this.ref(`${this.table}.${column}`), '=', value)
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
-
-      if (record) {
-        await this.afterUpdate([record as Data]);
-      }
-      
-      return record;
     }
 
     static async findByFieldsAndUpdate(
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
-      data: Readonly<Updateable<Table>>,
+      data: UpdateExpression<DB, TableName, TableName>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
-      const processedData = await this.beforeUpdate(data);
+      const updatedData = this.processDataBeforeUpdate(data);
 
-      const records = await this
+      return await this
         .updateTable()
         // @ts-ignore
-        .set(processedData)
+        .set(updatedData)
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
@@ -331,25 +314,21 @@ export default function model<
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .execute();
-
-      await this.afterUpdate(records as Data[]);
-
-      return records;
     }
 
     static async findOneByFieldsAndUpdate(
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
-      data: Readonly<Updateable<Table>>,
+      data: UpdateExpression<DB, TableName, TableName>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
-      const processedData = await this.beforeUpdate(data);
       // TODO use with and select with limit 1
-      const record = await this
+      const updatedData = this.processDataBeforeUpdate(data);
+      return await this
         .updateTable()
         // @ts-ignore
-        .set(processedData)
+        .set(updatedData)
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
@@ -364,29 +343,22 @@ export default function model<
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
-
-        if (record) {
-          await this.afterUpdate([record as Data]);
-        }
-
-        return record;
     }
 
     static async getOneByFieldsAndUpdate(
       fields: Readonly<Partial<{
         [ColumnName in keyof Table & string]: SelectType<Table[ColumnName]> | SelectType<Table[ColumnName]>[];
       }>>, 
-      data: Readonly<Updateable<Table>>,
+      data: UpdateExpression<DB, TableName, TableName>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      const processedData = await this.beforeUpdate(data);
-
       // TODO use with and select with limit 1
-      const record = await this
+      const updatedData = this.processDataBeforeUpdate(data);
+      return await this
         .updateTable()
         // @ts-ignore
-        .set(processedData)
+        .set(updatedData)
         .where((qb) => {
           let currentQuery = qb;
           for (const [column, value] of Object.entries(fields)) {
@@ -401,14 +373,11 @@ export default function model<
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
-
-      await this.afterUpdate([record as Data]);
-      return record;
     }
 
     static findByIdAndUpdate(
       id: SelectType<IdColumn>, 
-      data: Updateable<Table>,
+      data: UpdateExpression<DB, TableName, TableName>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
       return this.findOneAndUpdate(this.id, id, data, func);
@@ -417,28 +386,24 @@ export default function model<
     static async getOneAndUpdate<ColumnName extends keyof Table & string>(
       column: ColumnName,
       value: Readonly<SelectType<Table[ColumnName]>>,
-      data: Readonly<Updateable<Table>>,
+      data: UpdateExpression<DB, TableName, TableName>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      const processedData = await this.beforeUpdate(data);
-
-      const record = await this
+      const updatedData = this.processDataBeforeUpdate(data);
+      return await this
         .updateTable()
         // @ts-ignore
-        .set(processedData)
+        .set(data)
         .where(this.ref(`${this.table}.${column}`), '=', value)
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
-
-      await this.afterUpdate([record as Data]);
-      return record;
     }
 
     static getByIdAndUpdate(
       id: SelectType<IdColumn>, 
-      data: Updateable<Table>,
+      data: UpdateExpression<DB, TableName, TableName>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
@@ -461,58 +426,69 @@ export default function model<
       return this.lock(this.id, id);
     }
     
-    static async insert(
-      values: Insertable<Table>,
+    static async insertOne(
+      values: InsertObject<DB, TableName>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      const processedValues = await this.beforeInsert(values);
-
-      const record = await this
+      return await this
         .insertInto()
-        .values(processedValues)
+        .values(this.processDataBeforeInsert(values))
         .returningAll()
         .executeTakeFirstOrThrow(error);
-
-      await this.afterInsert([record]);
-
-      return record;
     }
 
-    static async upsert(
-      values: Insertable<Table>,
+    static async insert(
+      values: InsertObjectOrList<DB, TableName>,
+    ) {
+      return await this
+        .insertInto()
+        .values(this.processDataBeforeInsert(values))
+        .returningAll()
+        .execute();
+    }
+
+    static async upsertOne(
+      values: InsertObject<DB, TableName>,
       upsertValues: UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      const processedInsertValues = await this.beforeInsert(values);
-      // const processedUpdateValues = await this.beforeUpdate(upsertValues);
-
-      const record = await this
+      return await this
         .insertInto()
-        .values(processedInsertValues)
+        .values(this.processDataBeforeInsert(values))
         .onConflict((oc) => oc
           .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
-          .doUpdateSet(upsertValues) as OnConflictUpdateBuilder<DB, TableName>
+          .doUpdateSet(this.processDataBeforeUpdate(upsertValues)) as OnConflictUpdateBuilder<DB, TableName>
         )
         .returningAll()
         .executeTakeFirstOrThrow(error);
-
-      await this.afterUpsert([record]);
-
-      return record;
     }
 
-    static async insertIfNotExists(
-      values: Insertable<Table>,
+    static async upsert(
+      values: InsertObjectOrList<DB, TableName>,
+      upsertValues: UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
+      conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
+    ) {
+      return await this
+        .insertInto()
+        .values(this.processDataBeforeInsert(values))
+        .onConflict((oc) => oc
+          .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
+          .doUpdateSet(this.processDataBeforeUpdate(upsertValues)) as OnConflictUpdateBuilder<DB, TableName>
+        )
+        .returningAll()
+        .execute();
+    }
+
+    static async insertOneIfNotExists(
+      values: InsertObject<DB, TableName>,
       sameColumn: keyof DB[TableName] & string,
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      const processedInsertValues = await this.beforeInsert(values);
-
-      const record = await this
+      return await this
         .insertInto()
-        .values(processedInsertValues)
+        .values(values)
         .onConflict((oc) => oc
           .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
           .doUpdateSet({
@@ -521,10 +497,6 @@ export default function model<
         )
         .returningAll()
         .executeTakeFirstOrThrow(error);
-
-      await this.afterInsert([record]);
-
-      return record;
     }
     
     // todo add limit via with
@@ -626,13 +598,9 @@ export default function model<
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      const record = await this
+      return await this
         .findByIdAndIncrementQuery(id, columns, func)
         .executeTakeFirstOrThrow(error);
-
-      await this.afterUpdate([record as Data]);
-
-      return record;
     }
 
     static relatedQuery<

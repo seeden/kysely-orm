@@ -1,4 +1,4 @@
-import { type SelectType, Selectable } from 'kysely';
+import { type SelectType } from 'kysely';
 import { type Model } from './model';
 
 type ParseCallback<IdType> = (id: string) => IdType;
@@ -51,8 +51,6 @@ export default function globalId<
   parseId: ParseCallback<SelectType<DB[TableName][IdColumnName]>>,
   type?: string,
 ) {
-  type Table = DB[TableName];
-  
   return class GlobalId extends Base {
     static readonly globalIdType = type || Base.table;
 

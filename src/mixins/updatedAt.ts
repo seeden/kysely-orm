@@ -1,4 +1,5 @@
-import { sql, type Updateable, type InsertObject } from 'kysely';
+import { sql, type ExpressionBuilder } from 'kysely';
+import { type UpdateExpression } from 'kysely/dist/cjs/parser/update-set-parser';
 import { type Model } from './model';
 
 export default function updatedAt<
@@ -11,11 +12,18 @@ TBase extends Model<DB, TableName, IdColumnName>,
   field: keyof DB[TableName] & string,
 ) {
   return class UpdatedAt extends Base  {
-    static async beforeUpdate(data: Readonly<Updateable<DB[TableName]>>) {
+    static processDataBeforeUpdate(data: UpdateExpression<DB, TableName, TableName>) {
+      if (typeof data === 'function') {
+        return (eb: ExpressionBuilder<DB, TableName>) => ({
+          [field]: sql`CURRENT_TIMESTAMP`,
+          ...data(eb),
+        });
+      }
+
       return {
-        ...await super.beforeUpdate(data),
-        [field]: sql`NOW()`,
+        [field]: sql`CURRENT_TIMESTAMP`,
+        ...data,
       };
     }
-  }
+  };
 }

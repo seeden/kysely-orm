@@ -2,7 +2,7 @@ import { SqliteDialect, Migrator, FileMigrationProvider } from 'kysely';
 import SQLLiteDatabase from 'better-sqlite3';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Database, RelationType, applyMixins, updatedAt, globalId, slug, cursorable, isolate } from '../src';
+import { Database, RelationType, applyMixins, updatedAt, globalId, cursorable, isolate } from '../src';
 import DB, { Users } from './fixtures/DB';
 
 const dialect = new SqliteDialect({
@@ -78,17 +78,6 @@ class User extends applyMixins(db, 'users', 'id')(
     },
     max: 100,
     limit: 10,
-  }),
-  (base) => slug<DB, 'users', 'id', typeof base>(base)({
-    field: 'username',
-    sources: ['name'],
-    slugOptions: {
-      truncate: 15,
-      dictionary: {
-        quizana: '',
-        admin: '',
-      },
-    },
   }),
 ) {
 
@@ -179,9 +168,10 @@ describe('db isolation', () => {
 
   it('should throw when you try to use isolated db', async () => {
     await expect(async () => {
-      await NonIsolatedUser.insert({
+      await NonIsolatedUser.insertOne({
         email: 'test@gmail.com',
         name: 'Tester',
+        username: 'tester',
         password: 'myPassword',
       });
    }).rejects.toThrowError("Cannot use insertInto() in not isolated model. Call isolate({ Model }) first.");
@@ -200,7 +190,7 @@ describe('db isolation', () => {
     expect(NonIsolatedUser.getIsolated2()).toBe(false);
 
     // isolated model should work
-    const user = await IsolatedUser.insert({
+    const user = await IsolatedUser.insertOne({
       email: 'test@gmail.com',
       name: 'Tester',
       username: 'tester',
@@ -220,7 +210,7 @@ describe('db isolation', () => {
     const { NonIsolatedUser: IsolatedUser} = isolate({ NonIsolatedUser });
 
     // isolated model should work
-    const user = await IsolatedUser.insert({
+    const user = await IsolatedUser.insertOne({
       email: 'test@gmail.com',
       name: 'Tester',
       username: 'tester',
@@ -240,7 +230,7 @@ describe('db isolation', () => {
     class DoubleIsolated extends IsolatedUser {}
 
     // isolated model should work
-    const user = await DoubleIsolated.insert({
+    const user = await DoubleIsolated.insertOne({
       email: 'test@gmail.com',
       name: 'Tester',
       username: 'tester',
@@ -283,9 +273,10 @@ describe('transactions', () => {
   });
 
   it('should able to increment column', async () => {
-    const user = await User.insert({
+    const user = await User.insertOne({
       email: 'test@gmail.com',
       name: 'Tester',
+      username: 'tester',
       password: 'myPassword',
     });
 
@@ -309,10 +300,11 @@ describe('transactions', () => {
     expect(updatedUser.followersCount).toBe(2);
   });
 
-  it('should able to upsert', async () => {
-    const user = await User.upsert({
+  it('should able to upsertOne', async () => {
+    const user = await User.upsertOne({
       email: 'test-upsert@gmail.com',
       name: 'Tester Before Upsert',
+      username: 'tester-before-upsert',
       password: 'myPassword',
     }, {
       name: 'Tester after Upsert',
@@ -321,9 +313,10 @@ describe('transactions', () => {
     expect(user.name).toBe('Tester Before Upsert');
 
 
-    const updatedUser = await User.upsert({
+    const updatedUser = await User.upsertOne({
       email: 'test-upsert@gmail.com',
       name: 'Tester Before Upsert',
+      username: 'tester-before-upsert',
       password: 'myPassword',
     }, {
       name: 'Tester After Upsert',
@@ -332,19 +325,21 @@ describe('transactions', () => {
     expect(updatedUser.name).toBe('Tester After Upsert');
   });
 
-  it('should able to insertIfNotExists', async () => {
-    const user = await User.insertIfNotExists({
+  it('should able to insertOneIfNotExists', async () => {
+    const user = await User.insertOneIfNotExists({
       email: 'test-insert-only@gmail.com',
       name: 'Tester Before Insert Only',
+      username: 'tester-before-insert-only',
       password: 'myPassword',
     }, 'email', 'email');
 
     expect(user.name).toBe('Tester Before Insert Only');
     expect(user.email).toBe('test-insert-only@gmail.com');
 
-    const updatedUser = await User.insertIfNotExists({
+    const updatedUser = await User.insertOneIfNotExists({
       email: 'test-insert-only@gmail.com',
       name: 'Tester After Insert Only',
+      username: 'tester-after-insert-only',
       password: 'myPassword',
     }, 'email', 'email');
 
@@ -393,7 +388,7 @@ describe('transactions', () => {
   it('should execute related query', async () => {
     const user = await User.getByEmail('test@gmail.com');
 
-    const comment = await Comment.insert({
+    const comment = await Comment.insertOne({
       userId: user.id,
       message: 'Test message',
     });
@@ -409,7 +404,7 @@ describe('transactions', () => {
   it('should execute find related query', async () => {
     const user = await User.getByEmail('test@gmail.com');
 
-    const comment = await Comment.insert({
+    const comment = await Comment.insertOne({
       userId: user.id,
       message: 'Test message 2',
     });
@@ -435,7 +430,7 @@ describe('transactions', () => {
     const user = await User.getByEmail('test@gmail.com');
     const user2 = await User.getByEmail('test-insert-only@gmail.com');
 
-    const comment3 = await Comment.insert({
+    const comment3 = await Comment.insertOne({
       userId: user2.id,
       message: 'Test message 3',
     });
@@ -530,7 +525,7 @@ describe('cursors', () => {
   it('should execute cursorable quest', async () => {
     const user = await User.getByEmail('test@gmail.com');
 /*
-    const comment = await Comment.insert({
+    const comment = await Comment.insertOne({
       userId: user.id,
       message: 'Test message',
     });

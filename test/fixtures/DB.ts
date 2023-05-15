@@ -21,7 +21,7 @@ export interface Users {
   name: string;
   password: string;
   createdAt: Generated<number>;
-  username: Generated<string>;
+  username: string;
   updatedAt: Generated<string>;
   followersCount: Generated<number>;
 }
