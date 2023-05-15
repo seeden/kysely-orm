@@ -2,7 +2,7 @@ import { SqliteDialect, Migrator, FileMigrationProvider } from 'kysely';
 import SQLLiteDatabase from 'better-sqlite3';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Database, RelationType, applyMixins, updatedAt, globalId, cursorable, isolate } from '../src';
+import { Database, RelationType, applyMixins, updatedAt, globalId, slug, cursorable, isolate } from '../src';
 import DB, { Users } from './fixtures/DB';
 
 const dialect = new SqliteDialect({
@@ -78,6 +78,17 @@ class User extends applyMixins(db, 'users', 'id')(
     },
     max: 100,
     limit: 10,
+  }),
+  (base) => slug<DB, 'users', 'id', typeof base>(base)({
+    field: 'username',
+    sources: ['name'],
+    slugOptions: {
+      truncate: 15,
+      dictionary: {
+        quizana: '',
+        admin: '',
+      },
+    },
   }),
 ) {
 
@@ -273,10 +284,9 @@ describe('transactions', () => {
   });
 
   it('should able to increment column', async () => {
-    const user = await User.insertOne({
+    const user = await User.insertOneWithSlug({
       email: 'test@gmail.com',
       name: 'Tester',
-      username: 'tester',
       password: 'myPassword',
     });
 
@@ -301,10 +311,9 @@ describe('transactions', () => {
   });
 
   it('should able to upsertOne', async () => {
-    const user = await User.upsertOne({
+    const user = await User.upsertOneWithSlug({
       email: 'test-upsert@gmail.com',
       name: 'Tester Before Upsert',
-      username: 'tester-before-upsert',
       password: 'myPassword',
     }, {
       name: 'Tester after Upsert',
@@ -313,10 +322,9 @@ describe('transactions', () => {
     expect(user.name).toBe('Tester Before Upsert');
 
 
-    const updatedUser = await User.upsertOne({
+    const updatedUser = await User.upsertOneWithSlug({
       email: 'test-upsert@gmail.com',
       name: 'Tester Before Upsert',
-      username: 'tester-before-upsert',
       password: 'myPassword',
     }, {
       name: 'Tester After Upsert',
@@ -326,20 +334,18 @@ describe('transactions', () => {
   });
 
   it('should able to insertOneIfNotExists', async () => {
-    const user = await User.insertOneIfNotExists({
+    const user = await User.insertOneIfNotExistsWithSlug({
       email: 'test-insert-only@gmail.com',
       name: 'Tester Before Insert Only',
-      username: 'tester-before-insert-only',
       password: 'myPassword',
     }, 'email', 'email');
 
     expect(user.name).toBe('Tester Before Insert Only');
     expect(user.email).toBe('test-insert-only@gmail.com');
 
-    const updatedUser = await User.insertOneIfNotExists({
+    const updatedUser = await User.insertOneIfNotExistsWithSlug({
       email: 'test-insert-only@gmail.com',
       name: 'Tester After Insert Only',
-      username: 'tester-after-insert-only',
       password: 'myPassword',
     }, 'email', 'email');
 

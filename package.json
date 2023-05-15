@@ -29,7 +29,10 @@
   },
   "author": "Zlatko Fedor <kysely-orm@zlatkofedor.com>",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "puid": "^1.0.7",
+    "url-slug": "^3.0.4"
+  },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.4",
     "@types/jest": "^29.5.1",
