@@ -128,6 +128,18 @@ export default function model<
       return this.db.with(name, expression);
     }
 
+    static async afterSingleInsert(singleResult: Selectable<Table>) {
+      return singleResult;
+    }
+
+    static async afterSingleUpdate(singleResult: Selectable<Table>) {
+      return singleResult;
+    }
+
+    static async afterSingleUpsert(singleResult: Selectable<Table>) {
+      return singleResult;
+    }
+
     static processDataBeforeUpdate(data: UpdateExpression<DB, TableName, TableName>): UpdateExpression<DB, TableName, TableName>;
     static processDataBeforeUpdate(data: UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>): UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>;
     static processDataBeforeUpdate(data: UpdateExpression<DB, TableName, TableName> | UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>) {
@@ -277,7 +289,7 @@ export default function model<
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
       const updatedData = this.processDataBeforeUpdate(data);
-      return await this
+      const record = await this
         .updateTable()
         // @ts-ignore
         .set(updatedData)
@@ -285,6 +297,8 @@ export default function model<
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
+
+      return record ? this.afterSingleUpdate(record as Selectable<Table>) : record;
     }
 
     static async findByFieldsAndUpdate(
@@ -325,7 +339,7 @@ export default function model<
     ) {
       // TODO use with and select with limit 1
       const updatedData = this.processDataBeforeUpdate(data);
-      return await this
+      const record = await this
         .updateTable()
         // @ts-ignore
         .set(updatedData)
@@ -343,6 +357,8 @@ export default function model<
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirst();
+
+      return record ? this.afterSingleUpdate(record as Selectable<Table>) : record;
     }
 
     static async getOneByFieldsAndUpdate(
@@ -355,7 +371,7 @@ export default function model<
     ) {
       // TODO use with and select with limit 1
       const updatedData = this.processDataBeforeUpdate(data);
-      return await this
+      const record = await this
         .updateTable()
         // @ts-ignore
         .set(updatedData)
@@ -373,6 +389,8 @@ export default function model<
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
+
+      return this.afterSingleUpdate(record  as Selectable<Table>);
     }
 
     static findByIdAndUpdate(
@@ -391,14 +409,16 @@ export default function model<
       error: typeof NoResultError = this.noResultError,
     ) {
       const updatedData = this.processDataBeforeUpdate(data);
-      return await this
+      const record = await this
         .updateTable()
         // @ts-ignore
-        .set(data)
+        .set(updatedData)
         .where(this.ref(`${this.table}.${column}`), '=', value)
         .$if(!!func, (qb) => func?.(qb as unknown as UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) as unknown as typeof qb)
         .returningAll()
         .executeTakeFirstOrThrow(error);
+
+      return this.afterSingleUpdate(record as Selectable<Table>);
     }
 
     static getByIdAndUpdate(
@@ -430,17 +450,19 @@ export default function model<
       values: InsertObject<DB, TableName>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      return await this
+      const record = await this
         .insertInto()
         .values(this.processDataBeforeInsert(values))
         .returningAll()
         .executeTakeFirstOrThrow(error);
+
+      return this.afterSingleInsert(record);
     }
 
     static async insert(
       values: InsertObjectOrList<DB, TableName>,
     ) {
-      return await this
+      return this
         .insertInto()
         .values(this.processDataBeforeInsert(values))
         .returningAll()
@@ -453,7 +475,7 @@ export default function model<
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      return await this
+      const record = await this
         .insertInto()
         .values(this.processDataBeforeInsert(values))
         .onConflict((oc) => oc
@@ -462,6 +484,8 @@ export default function model<
         )
         .returningAll()
         .executeTakeFirstOrThrow(error);
+
+      return this.afterSingleUpsert(record);
     }
 
     static async upsert(
@@ -486,7 +510,7 @@ export default function model<
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      return await this
+      const record = await this
         .insertInto()
         .values(values)
         .onConflict((oc) => oc
@@ -497,6 +521,8 @@ export default function model<
         )
         .returningAll()
         .executeTakeFirstOrThrow(error);
+
+      return this.afterSingleInsert(record);
     }
     
     // todo add limit via with
@@ -584,12 +610,14 @@ export default function model<
         .returningAll();
     }
 
-    static findByIdAndIncrement(
+    static async findByIdAndIncrement(
       id: Id, 
       columns: Partial<Record<keyof Table, number>>,
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
     ) {
-      return this.findByIdAndIncrementQuery(id, columns, func).executeTakeFirst();
+      const record = await this.findByIdAndIncrementQuery(id, columns, func).executeTakeFirst();
+
+      return record ? this.afterSingleUpdate(record as Selectable<Table>) : record;
     }
 
     static async getByIdAndIncrement(
@@ -598,9 +626,11 @@ export default function model<
       func?: (qb: UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>) => UpdateQueryBuilder<DB, TableName, TableName, UpdateResult>,
       error: typeof NoResultError = this.noResultError,
     ) {
-      return await this
+      const record = await this
         .findByIdAndIncrementQuery(id, columns, func)
         .executeTakeFirstOrThrow(error);
+
+      return this.afterSingleUpdate(record as Selectable<Table>);
     }
 
     static relatedQuery<
