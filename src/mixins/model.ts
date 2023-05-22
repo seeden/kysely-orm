@@ -1,4 +1,4 @@
-import { type SelectType, type Updateable, type AnyColumn, type Selectable, NoResultError, type InsertQueryBuilder, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder } from 'kysely';
+import { type SelectType, type Updateable, type AnyColumn, type Selectable, NoResultError, type InsertQueryBuilder, type UpdateQueryBuilder, type SelectQueryBuilder, type DeleteQueryBuilder, type DeleteResult, type UpdateResult, type RawBuilder, sql, type OnConflictDatabase, type OnConflictTables, OnConflictUpdateBuilder, OnConflictBuilder } from 'kysely';
 import { type CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
 import { type UpdateExpression } from 'kysely/dist/cjs/parser/update-set-parser';
 import { type InsertObjectOrList, type InsertObject } from 'kysely/dist/cjs/parser/insert-values-parser';
@@ -473,17 +473,19 @@ export default function model<
       values: InsertObject<DB, TableName>,
       upsertValues: UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
-      func?: (qb: InsertQueryBuilder<DB, TableName, TableName>) => InsertQueryBuilder<DB, TableName, TableName>,
+      func?: (qb: OnConflictUpdateBuilder<DB, TableName>) => OnConflictUpdateBuilder<DB, TableName>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const record = await this
         .insertInto()
         .values(this.processDataBeforeInsert(values))
-        .onConflict((oc) => oc
-          .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
-          .doUpdateSet(this.processDataBeforeUpdate(upsertValues)) as OnConflictUpdateBuilder<DB, TableName>
-        )
-        .$if(!!func, (qb) => func?.(qb as unknown as InsertQueryBuilder<DB, TableName, TableName>) as unknown as typeof qb)
+        .onConflict((ocb) => {
+          const updatedOCB = ocb
+            .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
+            .doUpdateSet(this.processDataBeforeUpdate(upsertValues)) as OnConflictUpdateBuilder<DB, TableName>;
+
+          return func ? func(updatedOCB) : updatedOCB;
+        })
         .returningAll()
         .executeTakeFirstOrThrow(error);
 
@@ -494,16 +496,18 @@ export default function model<
       values: InsertObjectOrList<DB, TableName>,
       upsertValues: UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>,
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
-      func?: (qb: InsertQueryBuilder<DB, TableName, TableName>) => InsertQueryBuilder<DB, TableName, TableName>,
+      func?: (qb: OnConflictUpdateBuilder<DB, TableName>) => OnConflictUpdateBuilder<DB, TableName>,
     ) {
       return await this
         .insertInto()
         .values(this.processDataBeforeInsert(values))
-        .onConflict((oc) => oc
-          .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
-          .doUpdateSet(this.processDataBeforeUpdate(upsertValues)) as OnConflictUpdateBuilder<DB, TableName>
-        )
-        .$if(!!func, (qb) => func?.(qb as unknown as InsertQueryBuilder<DB, TableName, TableName>) as unknown as typeof qb)
+        .onConflict((ocb) => {
+          const updatedOCB = ocb
+            .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
+            .doUpdateSet(this.processDataBeforeUpdate(upsertValues)) as OnConflictUpdateBuilder<DB, TableName>;
+
+          return func ? func(updatedOCB) : updatedOCB;
+        })
         .returningAll()
         .execute();
     }
@@ -512,20 +516,22 @@ export default function model<
       values: Values,
       sameColumn: keyof DB[TableName] & string,
       conflictColumns: Readonly<(keyof Table & string)[]> | Readonly<keyof Table & string>,
-      func?: (qb: InsertQueryBuilder<DB, TableName, TableName>) => InsertQueryBuilder<DB, TableName, TableName>,
+      func?: (qb: OnConflictUpdateBuilder<DB, TableName>) => OnConflictUpdateBuilder<DB, TableName>,
       error: typeof NoResultError = this.noResultError,
     ) {
       const record = await this
         .insertInto()
         .values(values)
-        .onConflict((oc) => oc
-          .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
-          .doUpdateSet({
-            // use current value instead of excluded because excluded value is not required
-            [sameColumn]: (eb: any) => eb.ref(`${this.table}.${sameColumn}`)
-          } as UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>) as OnConflictUpdateBuilder<DB, TableName>
-        )
-        .$if(!!func, (qb) => func?.(qb as unknown as InsertQueryBuilder<DB, TableName, TableName>) as unknown as typeof qb)
+        .onConflict((ocb) => {
+          const updatedOCB = ocb
+            .columns(Array.isArray(conflictColumns) ? conflictColumns : [conflictColumns])
+            .doUpdateSet({
+              // use current value instead of excluded because excluded value is not required
+              [sameColumn]: (eb: any) => eb.ref(`${this.table}.${sameColumn}`)
+            } as UpdateExpression<OnConflictDatabase<DB, TableName>, OnConflictTables<TableName>, OnConflictTables<TableName>>) as OnConflictUpdateBuilder<DB, TableName>;
+          
+          return func ? func(updatedOCB) : updatedOCB;
+        })
         .returningAll()
         .executeTakeFirstOrThrow(error);
 
