@@ -1,5 +1,6 @@
 import { type SelectQueryBuilder, sql, type Selectable } from 'kysely';
 import { type Model } from './model';
+import { type ExtractTableAlias } from 'kysely/dist/cjs/parser/table-parser';
 
 type ColumnSortOptions = { 
   direction?: 'ASC' | 'DESC';
@@ -42,7 +43,7 @@ export default function cursorable<
 
   type CursorableOptions = {
     sortKey?: keyof typeof config.sortKeys; 
-    func?: (qb: SelectQueryBuilder<DB, TableName, {}>) => SelectQueryBuilder<DB, TableName, {}>,
+    func?: (qb: SelectQueryBuilder<DB, ExtractTableAlias<DB, TableName>, {}>) => SelectQueryBuilder<DB, ExtractTableAlias<DB, TableName>, {}>,
     oneMore?: boolean,
   } & ({
     first?: number;
@@ -170,7 +171,7 @@ export default function cursorable<
       let query = this
         .selectFrom()
         .limit(limit + (oneMore ? 1 : 0))
-        .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, any>) as unknown as typeof qb)
+        .$if(!!func, (qb) => func ? func(qb) : qb)
         .$if(!!cursor, (qbIf) => qbIf.where(({ ref, or, and, cmpr }) => {
           const [first, ...rest] = parseCursor(sortKey, cursor);
 
@@ -287,7 +288,7 @@ export default function cursorable<
 
           const { count } = await this
             .selectFrom()
-            .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
+            .$if(!!func, (qb) => func ? func(qb) : qb)
             .select((eb) => eb.fn.countAll<string>().as('count'))
             .executeTakeFirstOrThrow(this.noResultError);
 
