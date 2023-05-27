@@ -288,10 +288,10 @@ export default function cursorable<
           const { count } = await this
             .selectFrom()
             .$if(!!func, (qb) => func?.(qb as unknown as SelectQueryBuilder<DB, TableName, {}>) as unknown as typeof qb)
-            .select((eb) => eb.fn.countAll().as('count'))
+            .select((eb) => eb.fn.countAll<string>().as('count'))
             .executeTakeFirstOrThrow(this.noResultError);
 
-          return Number(count);
+          return Number.parseInt(count, 10);
         },
       };
     }
